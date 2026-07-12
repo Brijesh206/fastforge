@@ -1,9 +1,8 @@
 """Tests for shared schemas."""
 
 import pytest
-from pydantic import ValidationError
-
 from fastforge_common.schemas import ErrorDetail, ErrorResponse
+from pydantic import ValidationError
 
 
 def test_error_response_uses_standard_envelope() -> None:

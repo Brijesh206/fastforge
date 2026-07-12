@@ -5,9 +5,8 @@
 
 from functools import lru_cache
 
-from pydantic import Field
-
 from fastforge_common.config import BaseAppSettings
+from pydantic import Field
 
 
 class ApiSettings(BaseAppSettings):

@@ -7,8 +7,6 @@ response. All business logic lives in ``fastforge_auth.AuthService``.
 from http import HTTPStatus
 
 from fastapi import APIRouter, Depends
-
-from app.auth.dependencies import get_auth_service, get_current_user
 from fastforge_auth import (
     AuthService,
     LoginRequest,
@@ -18,6 +16,8 @@ from fastforge_auth import (
     UserCreate,
     UserResponse,
 )
+
+from app.auth.dependencies import get_auth_service, get_current_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

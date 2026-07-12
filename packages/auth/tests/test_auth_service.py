@@ -3,7 +3,6 @@
 from uuid import UUID, uuid4
 
 import pytest
-
 from fastforge_auth.exceptions import (
     InactiveUserError,
     InvalidCredentialsError,
@@ -75,7 +74,9 @@ def _service() -> tuple[AuthService, FakeUserRepository]:
 async def test_register_user_creates_user_with_hashed_password() -> None:
     service, repository = _service()
 
-    user = await service.register_user(UserCreate(email="new@example.com", password="a-strong-pass"))
+    user = await service.register_user(
+        UserCreate(email="new@example.com", password="a-strong-pass")
+    )
 
     assert user.email == "new@example.com"
     assert user.password_hash == "hashed:a-strong-pass"
@@ -109,7 +110,9 @@ async def test_authenticate_user_raises_for_unknown_email() -> None:
     service, _ = _service()
 
     with pytest.raises(InvalidCredentialsError):
-        await service.authenticate_user(LoginRequest(email="ghost@example.com", password="whatever"))
+        await service.authenticate_user(
+            LoginRequest(email="ghost@example.com", password="whatever")
+        )
 
 
 async def test_authenticate_user_raises_for_wrong_password() -> None:
@@ -129,7 +132,9 @@ async def test_authenticate_user_raises_for_inactive_user() -> None:
     repository.users_by_email["user@example.com"] = existing
 
     with pytest.raises(InactiveUserError):
-        await service.authenticate_user(LoginRequest(email="user@example.com", password="a-strong-pass"))
+        await service.authenticate_user(
+            LoginRequest(email="user@example.com", password="a-strong-pass")
+        )
 
 
 def _add_user(repository: FakeUserRepository, *, is_active: bool = True) -> User:

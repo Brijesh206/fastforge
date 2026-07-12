@@ -1,13 +1,13 @@
 """FastAPI application entry point."""
 
 from fastapi import FastAPI
+from fastforge_common.constants import DEFAULT_API_PREFIX
 
 from app.api.router import api_router
 from app.config import get_settings
 from app.core.errors import register_exception_handlers
 from app.lifespan import lifespan
 from app.middleware.request_logging import register_request_logging_middleware
-from fastforge_common.constants import DEFAULT_API_PREFIX
 
 
 def create_app() -> FastAPI:

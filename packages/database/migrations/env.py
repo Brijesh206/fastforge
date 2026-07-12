@@ -4,17 +4,16 @@ import asyncio
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import pool
-from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config
-
-from fastforge_database.config import DatabaseSettings
-from fastforge_database.models.base import Base
 
 # Feature packages register their models here so autogenerate can see the
 # full platform schema from this shared migrations directory. Importing a
 # model module is enough — it registers the table on Base.metadata.
 from fastforge_auth.models.user import User  # noqa: F401
+from fastforge_database.config import DatabaseSettings
+from fastforge_database.models.base import Base
+from sqlalchemy import pool
+from sqlalchemy.engine import Connection
+from sqlalchemy.ext.asyncio import async_engine_from_config
 
 config = context.config
 

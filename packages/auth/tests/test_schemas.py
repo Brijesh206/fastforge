@@ -1,10 +1,9 @@
 """Tests for auth schemas."""
 
 import pytest
-from pydantic import ValidationError
-
 from fastforge_auth.schemas.auth import LoginRequest, TokenPair
 from fastforge_auth.schemas.user import UserCreate
+from pydantic import ValidationError
 
 
 def test_user_create_normalizes_email() -> None:

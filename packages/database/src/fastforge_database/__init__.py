@@ -1,7 +1,13 @@
 """Database foundation for FastForge."""
 
 from fastforge_database.config import DatabaseSettings
-from fastforge_database.models.base import AuditMixin, Base, BaseModel, SoftDeleteMixin, TimestampMixin
+from fastforge_database.models.base import (
+    AuditMixin,
+    Base,
+    BaseModel,
+    SoftDeleteMixin,
+    TimestampMixin,
+)
 from fastforge_database.repositories.base import BaseRepository
 from fastforge_database.session import DatabaseManager, get_session
 from fastforge_database.utils.pagination import PaginatedResult, PaginationParams

@@ -1,7 +1,6 @@
 """Tests for sorting utilities."""
 
 import pytest
-
 from fastforge_database.utils.sorting import SortOrder, SortParams
 
 

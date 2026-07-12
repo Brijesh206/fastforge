@@ -3,9 +3,8 @@
 import ssl
 
 import pytest
-from pydantic import ValidationError
-
 from fastforge_database.config import DatabaseSettings
+from pydantic import ValidationError
 
 
 def _assert_require_ssl(connect_args: dict[str, object]) -> None:

@@ -1,7 +1,5 @@
 """Base repository for database access."""
 
-from datetime import UTC, datetime
-from typing import Generic, TypeVar
 from uuid import UUID
 
 from sqlalchemy import Select, func, select
@@ -12,10 +10,8 @@ from fastforge_database.models.base import BaseModel, SoftDeleteMixin
 from fastforge_database.utils.pagination import PaginatedResult, PaginationParams
 from fastforge_database.utils.sorting import SortParams
 
-ModelT = TypeVar("ModelT", bound=BaseModel)
 
-
-class BaseRepository(Generic[ModelT]):
+class BaseRepository[ModelT: BaseModel]:
     """Generic repository providing CRUD, pagination, and soft delete operations.
 
     Repositories own persistence only. They must not contain business logic,
@@ -32,7 +28,7 @@ class BaseRepository(Generic[ModelT]):
         """Build the base select query, excluding soft-deleted records by default."""
         query = select(self.model)
         if not include_deleted and issubclass(self.model, SoftDeleteMixin):
-            query = query.where(self.model.deleted_at.is_(None))  # type: ignore[attr-defined]
+            query = query.where(self.model.deleted_at.is_(None))
         return query
 
     async def get_by_id(
@@ -55,7 +51,7 @@ class BaseRepository(Generic[ModelT]):
         """Return the total count of records."""
         query = select(func.count()).select_from(self.model)
         if not include_deleted and issubclass(self.model, SoftDeleteMixin):
-            query = query.where(self.model.deleted_at.is_(None))  # type: ignore[attr-defined]
+            query = query.where(self.model.deleted_at.is_(None))
         result = await self._session.execute(query)
         return result.scalar_one()
 
@@ -73,7 +69,7 @@ class BaseRepository(Generic[ModelT]):
 
         count_query = select(func.count()).select_from(self.model)
         if not include_deleted and issubclass(self.model, SoftDeleteMixin):
-            count_query = count_query.where(self.model.deleted_at.is_(None))  # type: ignore[attr-defined]
+            count_query = count_query.where(self.model.deleted_at.is_(None))
 
         total_result = await self._session.execute(count_query)
         total = total_result.scalar_one()

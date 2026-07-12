@@ -1,9 +1,8 @@
 """Tests for pagination utilities."""
 
 import pytest
-from pydantic import ValidationError
-
 from fastforge_database.utils.pagination import PaginatedResult, PaginationParams
+from pydantic import ValidationError
 
 
 def test_pagination_params_calculate_offset_and_limit() -> None:

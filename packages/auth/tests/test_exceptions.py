@@ -2,8 +2,6 @@
 
 from http import HTTPStatus
 
-from fastforge_common.exceptions import ErrorCode
-
 from fastforge_auth.exceptions import (
     InactiveUserError,
     InvalidCredentialsError,
@@ -11,6 +9,7 @@ from fastforge_auth.exceptions import (
     UserAlreadyExistsError,
     UserNotFoundError,
 )
+from fastforge_common.exceptions import ErrorCode
 
 
 def test_user_already_exists_error_maps_to_conflict() -> None:

@@ -1,10 +1,9 @@
 """Tests for shared settings."""
 
 import pytest
-from pydantic import ValidationError
-
 from fastforge_common.config import BaseAppSettings
 from fastforge_common.enums import AppEnvironment
+from pydantic import ValidationError
 
 
 def test_base_app_settings_loads_by_field_name() -> None:

@@ -5,7 +5,6 @@ from uuid import uuid4
 
 import jwt
 import pytest
-
 from fastforge_auth.adapters.jwt_token_service import JwtTokenService
 from fastforge_auth.config import AuthSettings
 from fastforge_auth.exceptions import InvalidTokenError

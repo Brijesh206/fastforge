@@ -2,12 +2,9 @@
 
 from dataclasses import dataclass
 from math import ceil
-from typing import Generic, TypeVar
 
 from pydantic import Field
 from pydantic.dataclasses import dataclass as pydantic_dataclass
-
-T = TypeVar("T")
 
 
 @pydantic_dataclass(frozen=True)
@@ -29,7 +26,7 @@ class PaginationParams:
 
 
 @dataclass(frozen=True)
-class PaginatedResult(Generic[T]):
+class PaginatedResult[T]:
     """Paginated query result with metadata."""
 
     items: list[T]

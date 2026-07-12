@@ -27,12 +27,13 @@ class LogContext:
         }
 
 
-_log_context: ContextVar[LogContext] = ContextVar("log_context", default=LogContext())
+_log_context: ContextVar[LogContext | None] = ContextVar("log_context", default=None)
 
 
 def get_log_context() -> LogContext:
-    """Return the current log context."""
-    return _log_context.get()
+    """Return the current log context, or an empty context if none is bound."""
+    context = _log_context.get()
+    return context if context is not None else LogContext()
 
 
 def bind_log_context(**values: UUID | str | None) -> LogContext:

@@ -50,7 +50,7 @@ class DatabaseManager:
         await self._engine.dispose()
 
     @asynccontextmanager
-    async def session(self) -> AsyncGenerator[AsyncSession, None]:
+    async def session(self) -> AsyncGenerator[AsyncSession]:
         """Provide a database session without auto-commit.
 
         Services are responsible for committing or rolling back transactions.
@@ -63,7 +63,7 @@ class DatabaseManager:
                 raise
 
     @asynccontextmanager
-    async def transaction(self) -> AsyncGenerator[AsyncSession, None]:
+    async def transaction(self) -> AsyncGenerator[AsyncSession]:
         """Provide a database session with automatic commit on success."""
         async with self._session_factory() as db_session:
             try:
@@ -76,7 +76,7 @@ class DatabaseManager:
 
 async def get_session(
     manager: DatabaseManager,
-) -> AsyncGenerator[AsyncSession, None]:
+) -> AsyncGenerator[AsyncSession]:
     """FastAPI dependency that yields a database session.
 
     The session is not auto-committed. Services must commit explicitly.

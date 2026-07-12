@@ -2,9 +2,6 @@
 
 from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.dependencies.database import get_db_session, get_db_transaction
 from fastforge_auth import (
     AuthService,
     PasswordHasher,
@@ -13,6 +10,9 @@ from fastforge_auth import (
     UserRepository,
 )
 from fastforge_common.exceptions import AuthenticationError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.dependencies.database import get_db_session, get_db_transaction
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 

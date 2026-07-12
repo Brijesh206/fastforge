@@ -2,10 +2,9 @@
 
 from datetime import datetime
 
+from fastforge_database.models.base import BaseModel
 from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
-
-from fastforge_database.models.base import BaseModel
 
 
 class User(BaseModel):

@@ -8,7 +8,6 @@ from traceback import format_exception
 from fastforge_logging.context import get_log_context
 from fastforge_logging.redaction import redact_value
 
-
 RESERVED_RECORD_KEYS = {
     "args",
     "asctime",

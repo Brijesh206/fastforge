@@ -2,7 +2,6 @@
 
 from enum import StrEnum
 
-from pydantic import Field
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 

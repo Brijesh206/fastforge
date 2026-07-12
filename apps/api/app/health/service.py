@@ -1,13 +1,13 @@
 """Health check service."""
 
 from fastapi import Depends
+from fastforge_database import DatabaseManager
+from fastforge_logging import get_logger
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.dependencies.database import get_database_manager
 from app.health.schemas import HealthResponse
-from fastforge_database import DatabaseManager
-from fastforge_logging import get_logger
 
 logger = get_logger("app.health")
 

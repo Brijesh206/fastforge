@@ -3,7 +3,7 @@
 import logging
 
 from fastforge_logging.config import LogFormat, LoggingSettings
-from fastforge_logging.formatters import JsonLogFormatter, RESERVED_RECORD_KEYS, TextLogFormatter
+from fastforge_logging.formatters import RESERVED_RECORD_KEYS, JsonLogFormatter, TextLogFormatter
 from fastforge_logging.redaction import redact_value
 
 

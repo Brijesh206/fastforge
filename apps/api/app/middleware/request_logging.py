@@ -5,7 +5,6 @@ from time import perf_counter
 from uuid import uuid4
 
 from fastapi import FastAPI, Request, Response
-
 from fastforge_common.constants import REQUEST_ID_HEADER
 from fastforge_logging import bind_log_context, clear_log_context, get_logger
 
