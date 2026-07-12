@@ -1,0 +1,51 @@
+[project]
+name = "fastforge"
+version = "0.1.0"
+description = "FastForge — Reusable SaaS Foundation"
+requires-python = ">=3.13"
+dependencies = []
+
+[tool.uv.workspace]
+members = [
+    "apps/api",
+    "apps/worker",
+    "packages/analytics",
+    "packages/api_keys",
+    "packages/auth",
+    "packages/billing",
+    "packages/cache",
+    "packages/common",
+    "packages/database",
+    "packages/logging",
+    "packages/mail",
+    "packages/notifications",
+    "packages/storage",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.25",
+    "ruff>=0.9",
+    "mypy>=1.14",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["packages", "apps"]
+markers = [
+    "integration: marks tests requiring a running PostgreSQL database",
+]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_return_any = true
+warn_unused_configs = true

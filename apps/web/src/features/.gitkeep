@@ -1,0 +1,2 @@
+# TODO: Feature-based organization — auth, dashboard, billing, settings.
+# Each feature owns: components/, hooks/, api/, types/, utils/

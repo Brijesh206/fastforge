@@ -1,0 +1,87 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: fastforge-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: fastforge_platform
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d fastforge_platform"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: fastforge-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: fastforge-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  # TODO: Uncomment when apps/api is implemented
+  # api:
+  #   build:
+  #     context: .
+  #     dockerfile: docker/api/Dockerfile
+  #   container_name: fastforge-api
+  #   env_file:
+  #     - .env
+  #   ports:
+  #     - "8000:8000"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+
+  # TODO: Uncomment when apps/worker is implemented
+  # worker:
+  #   build:
+  #     context: .
+  #     dockerfile: docker/worker/Dockerfile
+  #   container_name: fastforge-worker
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+
+  # TODO: Uncomment when apps/web is implemented
+  # web:
+  #   build:
+  #     context: .
+  #     dockerfile: docker/web/Dockerfile
+  #   container_name: fastforge-web
+  #   env_file:
+  #     - .env
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - api
+
+volumes:
+  postgres_data:
+  redis_data:

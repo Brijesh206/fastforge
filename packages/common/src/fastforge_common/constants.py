@@ -1,0 +1,9 @@
+"""Shared platform constants."""
+
+DEFAULT_API_PREFIX = "/api/v1"
+DEFAULT_PAGE_SIZE = 20
+MAX_PAGE_SIZE = 100
+REQUEST_ID_HEADER = "X-Request-ID"
+USER_ID_HEADER = "X-User-ID"
+ORGANIZATION_ID_HEADER = "X-Organization-ID"
+API_KEY_ID_HEADER = "X-API-Key-ID"

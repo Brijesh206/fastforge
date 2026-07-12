@@ -1,0 +1,389 @@
+# FastForge - Project Progress
+
+Last updated: 2026-07-12
+
+## Current Status
+
+The initial monorepo scaffold is in place and ready for continued package-by-package development.
+
+Core structure exists:
+
+- `apps/api`
+- `apps/web`
+- `apps/worker`
+- `packages/database`
+- `packages/common`
+- `packages/logging`
+- `packages/auth`
+- placeholder packages for billing, cache, storage, mail, analytics, notifications, API keys, and UI
+- `docs`
+- `docker`
+- `scripts`
+
+The repository is being built as a reusable SaaS platform, not a one-off boilerplate.
+
+## Completed This Session (2026-07-12)
+
+### Auth Package
+
+Package path:
+
+```text
+packages/auth
+```
+
+First-pass authentication foundation implemented:
+
+- `User` SQLAlchemy model (UUIDv7 primary key, nullable `password_hash` for
+  OAuth-only users, `is_active`/`is_verified`/`last_login_at`)
+- `AuthProvider` and `TokenType` enums
+- Auth-specific exceptions (`UserAlreadyExistsError`, `UserNotFoundError`,
+  `InvalidCredentialsError`, `InactiveUserError`, `InvalidTokenError`) built
+  on the shared `fastforge_common` exception hierarchy
+- Pydantic v2 schemas: `UserCreate`, `UserResponse`, `LoginRequest`,
+  `TokenPair` (with email normalization and password length validation)
+- `PasswordHasher` interface + `Argon2PasswordHasher` adapter (Argon2id)
+- `TokenService` interface + `JwtTokenService` adapter (HS256 access/refresh
+  token pair, type-checked on decode)
+- `AuthSettings` (Pydantic Settings) for JWT secret/algorithm/expirations
+- `UserRepository` (get by id via inherited `BaseRepository`, get by email,
+  create, update) extending `fastforge_database.BaseRepository`
+- `AuthService` skeleton: `register_user`, `authenticate_user` — depends only
+  on the `PasswordHasher`/`TokenService` interfaces, never on Argon2 or PyJWT
+  directly
+- Alembic migration `0002_create_users_table` in the shared
+  `packages/database/migrations/versions` directory, hand-written to match
+  naming conventions (`pk_users`, `uq_users_email`)
+- `packages/database/migrations/env.py` now imports `fastforge_auth.models.user`
+  so the `users` table is registered on the shared metadata for future
+  autogenerate runs
+- `packages/auth/README.md`
+- 26 focused unit tests (exceptions, schemas, password hasher, JWT token
+  service, `AuthService` with an in-memory fake repository)
+
+Not yet implemented (left for future passes): OAuth, sessions, email
+verification, password reset, roles/permissions, organizations, API keys.
+
+### API Auth Routes + Secrets (2026-07-12)
+
+The `fastforge_auth` package is now wired into `apps/api` over HTTP:
+
+- New HTTP layer in `apps/api/app/auth/` (`router.py`, `dependencies.py`) —
+  routers stay thin and delegate to `AuthService`; all business logic remains
+  in the package.
+- Endpoints:
+  - `POST /api/v1/auth/register` → 201, returns `UserResponse`
+  - `POST /api/v1/auth/login` → `TokenPair`
+  - `POST /api/v1/auth/refresh` → `TokenPair`
+  - `GET  /api/v1/auth/me` → `UserResponse` (Bearer access token)
+- `get_current_user` dependency resolves a Bearer access token to a `User`
+  (via `HTTPBearer` + `TokenService` + `UserRepository`), raising the shared
+  `AuthenticationError` (401) on missing/invalid/inactive.
+- Added `get_db_transaction` session dependency (commits on success, rolls
+  back on error) for write endpoints; read endpoints use `get_db_session`.
+- `Argon2PasswordHasher` and `JwtTokenService` are created once in the app
+  lifespan and stored on `app.state`.
+- Package additions: `RefreshRequest` schema and `AuthService.refresh_tokens`
+  (+ 3 unit tests). Auth suite is now 29 tests.
+- Generated strong 48-byte `JWT_SECRET_KEY` and `APP_SECRET_KEY` into the real
+  `.env` (replacing the placeholder that PyJWT warned about).
+
+## Completed Previous Session (2026-07-08)
+
+### Database Package
+
+Package path:
+
+```text
+packages/database
+```
+
+Implemented or hardened:
+
+- SQLAlchemy async database settings
+- `DatabaseManager`
+- async session factory
+- transaction/session context managers
+- SQLAlchemy base model
+- timestamp mixin
+- soft delete mixin
+- audit mixin
+- UUID primary key support
+- real UUIDv7 generator
+- Alembic naming conventions
+- base repository
+- pagination helpers
+- sorting helpers
+- Supabase PostgreSQL support
+- local PostgreSQL support
+- database package README
+- focused database tests
+
+Supabase support is now first-class:
+
+- accepts Supabase direct database URLs
+- accepts Supabase pooler URLs
+- normalizes `postgresql://` to `postgresql+asyncpg://`
+- handles `sslmode=require`
+- auto-enables SSL for Supabase hosts
+- supports `DATABASE_SSL_MODE=require`
+
+### Common Package
+
+Package path:
+
+```text
+packages/common
+```
+
+Implemented:
+
+- `BaseAppSettings`
+- `AppEnvironment`
+- shared constants
+- standard application exception hierarchy
+- standard error codes
+- standard error response schemas
+- common package README
+- focused common tests
+
+The common package is intentionally framework-agnostic.
+
+It should not import:
+
+- FastAPI
+- SQLAlchemy
+- Celery
+- Redis
+- Stripe
+- Supabase SDKs
+- provider-specific SDKs
+
+### Logging Package
+
+Package path:
+
+```text
+packages/logging
+```
+
+Implemented:
+
+- `LoggingSettings`
+- log format enum
+- structured JSON formatter
+- local text formatter
+- context propagation with `contextvars`
+- request ID and correlation ID support
+- user, organization, API key, trace, and span context fields
+- recursive sensitive metadata redaction
+- `LoggingService`
+- root logger configuration helper
+- logger factory helper
+- logging package README
+- focused logging tests
+
+The logging package is intentionally framework-agnostic.
+
+It should not import:
+
+- FastAPI
+- Celery
+- Redis
+- SQLAlchemy
+- provider-specific logging or monitoring SDKs
+
+### API App Shell
+
+Application path:
+
+```text
+apps/api
+```
+
+Implemented:
+
+- FastAPI app factory
+- versioned root API router
+- API settings
+- application lifespan
+- logging setup during startup
+- database manager initialization during startup
+- database manager disposal during shutdown
+- database session dependency
+- request ID middleware
+- request logging middleware
+- standard application exception handlers
+- FastAPI validation error handler
+- unhandled exception handler
+- health service
+- health router
+- liveness endpoint
+- readiness endpoint
+- API README
+
+Current endpoints:
+
+```text
+GET /api/v1/health
+GET /api/v1/live
+GET /api/v1/ready
+```
+
+## Important Decisions
+
+- Supabase PostgreSQL is the primary hosted database target.
+- Local PostgreSQL remains supported for development and testing.
+- Packages must remain reusable and must not depend on application code.
+- Business logic belongs in services.
+- Database access belongs in repositories.
+- Routes must stay thin.
+- Provider SDKs should be hidden behind adapters.
+- Common primitives should live in `packages/common`.
+- Shared logging primitives should live in `packages/logging`.
+- API routes should remain thin and call services.
+- Health database checks live in `app.health.service`, not directly in routes.
+- Auth is application-managed, not tightly coupled to Supabase Auth; `AuthService`
+  depends only on the `PasswordHasher`/`TokenService` interfaces.
+- Feature packages (starting with auth) add their tables as new revisions inside
+  the shared `packages/database/migrations` directory rather than owning their
+  own separate migrations folder. `packages/database/migrations/env.py` imports
+  each feature package's models so they register on the shared metadata.
+
+## Platform Rename: Indie Platform OS → FastForge (2026-07-12)
+
+The platform was rebranded to **FastForge**. This was a full rename, including
+the code namespace:
+
+- Python import packages `indie_*` → `fastforge_*` (directories under
+  `packages/*/src/` renamed, all imports updated, Alembic `env.py` updated).
+- Distribution names `indie-*` → `fastforge-*` in every `pyproject.toml`, plus
+  `[tool.uv.sources]` and inter-package dependencies.
+- Display strings "Indie Platform" / "Indie Platform OS" → "FastForge" across
+  docs, READMEs, `APP_NAME` default, and docker container names.
+- Environment variable names are intentionally unchanged (`APP_NAME`, `JWT_*`,
+  `DATABASE_URL`, etc.), so existing `.env` files keep working.
+- A safety backup of the pre-rename repo was taken before the change.
+- After renaming, `uv sync --all-packages` reinstalled all 13 packages under
+  the new names and the full test suite still passed.
+- Legitimate English uses of the word "indie" (e.g. "indie developer") were
+  left untouched.
+- The on-disk repo folder is still literally `indie-platform`; rename it
+  separately if desired (it does not affect the build).
+
+## Environment / Tooling Fixes (2026-07-12)
+
+- Installed `uv` (0.11.28) and ran `uv sync --all-packages`; the workspace now
+  builds on CPython 3.13.13 in `.venv`.
+- `AuthSettings` token-expiry fields now read `JWT_ACCESS_TOKEN_EXPIRE_MINUTES`
+  / `JWT_REFRESH_TOKEN_EXPIRE_DAYS` to match the shipped `.env` names.
+- `.env`: corrected `DATABASE_SSL_MODE=true` (invalid literal, would crash
+  startup) → `require`.
+- Made `packages/database/tests` hermetic via a `conftest.py` that isolates
+  settings construction from the developer's `.env` and ambient env vars.
+- Fixed `DatabaseSettings.connect_args` SSL semantics: `require` now returns an
+  SSL context that encrypts **without** certificate verification (matching
+  libpq `sslmode=require`), while `verify-ca`/`verify-full` verify. Previously
+  `require` produced `{"ssl": True}` (full verification), which failed against
+  Supabase's cert chain (`CERTIFICATE_VERIFY_FAILED`).
+- Fixed Alembic `env.py` online migrations to pass `settings.connect_args`, so
+  migrations connect to Supabase with the correct SSL context.
+
+## Verification
+
+Completed (via `uv run` on CPython 3.13.13 in the workspace `.venv`):
+
+- `packages/auth/tests` — 29 passed (incl. 3 `refresh_tokens` tests).
+- `packages/common/tests` — 6 passed.
+- `packages/database/tests` — 16 passed (added a `verify-full` SSL test).
+- `packages/logging/tests` — 7 passed.
+- API app builds and both `AuthSettings`/`DatabaseSettings` load cleanly from
+  the real `.env` (`fastforge_auth` + `app.main` import clean).
+- Verified the `User` model maps to the expected `users` table (columns,
+  `pk_users`, `uq_users_email`) via `Base.metadata`.
+- Alembic revision chain (`0001_initial` → `0002_create_users_table`) applied
+  successfully **against the live Supabase database** (`alembic upgrade head`).
+- **End-to-end auth smoke test against Supabase passed**: register (argon2id
+  hash stored, UUIDv7 PK) → login (access+refresh JWT issued) → decode access
+  token maps back to the user → wrong password rejected → `last_login_at`
+  recorded → test user deleted (DB left clean; `users` + `alembic_version`
+  tables remain).
+- **End-to-end HTTP route test against Supabase passed** (FastAPI TestClient,
+  17 checks): `/health`, register→201, duplicate→409 (error envelope),
+  weak-password→422, login→200, `/me` without token→401, `/me` with token→200,
+  `/me` with refresh token→401 (token type enforced), refresh→200, wrong
+  password→401; test user cleaned up afterwards.
+
+Notes:
+
+- The per-package test-name collision when running `uv run pytest` across all
+  packages at once still exists (test dirs have no `__init__.py`); run each
+  package's tests separately, or add `--import-mode=importlib`.
+- **Security:** strong 48-byte `JWT_SECRET_KEY` and `APP_SECRET_KEY` are now set
+  in the real `.env` (the PyJWT short-key warning is resolved). `.env` is
+  gitignored and must never be committed.
+- One-off smoke scripts (`smoke_auth.py`, `smoke_routes.py`) live in the
+  session scratchpad (not committed).
+
+Recommended setup on a fresh machine:
+
+```bash
+uv sync --all-packages
+pnpm install
+# run per-package, e.g.:
+uv run pytest packages/auth/tests
+cd packages/database && uv run alembic upgrade head
+```
+
+## Next Development Steps
+
+Two parallel tracks: **deepen auth** (highest leverage, security-critical) and
+**add the next shared packages**. Suggested order:
+
+### A. Finish the auth surface (recommended next)
+
+1. **Password reset** — `PasswordResetToken` model + migration, request/confirm
+   endpoints, single-use short-lived tokens (needs the mail package to send the
+   email; can stub the sender first).
+2. **Email verification** — verification token + `POST /auth/verify`, gate
+   sensitive actions on `is_verified`.
+3. **Refresh-token / session persistence + revocation** — a `sessions` (or
+   `refresh_tokens`) table so logout and "revoke all sessions" actually
+   invalidate tokens (JWT refresh is currently stateless).
+4. **OAuth** — Google + GitHub via a provider adapter interface (account linking
+   by verified email), per `docs/08-authentication.md`.
+5. **Roles & permissions** — `role` on user + `require_permission(...)` helpers.
+6. **Rate limiting + audit logging** on auth endpoints (depends on cache).
+
+### B. Next shared packages (in order)
+
+1. **cache** — Redis adapter (sessions, OTP, rate limiting, general cache).
+2. **mail** — SMTP adapter + templates + queued send (unblocks reset/verify).
+3. **storage** — Supabase Storage adapter behind a `StorageProvider` interface.
+4. **billing** — Stripe behind a `BillingService`/adapter (subscriptions).
+5. **api_keys** — hashed developer API keys with prefixes + scopes.
+6. **worker** — Celery app + first tasks (send email, cleanup expired tokens).
+7. **analytics**, **notifications**, **observability** (Sentry/PostHog).
+
+### C. Cross-cutting hardening
+
+- Add `apps/api/tests/` (pytest + httpx) so the route checks run in CI, not just
+  ad-hoc smoke scripts.
+- Add `organizations` + membership for multi-tenant products.
+- Security headers middleware; CORS configuration.
+- Resolve the `tests/` module-name collision (add `__init__.py` or configure
+  `--import-mode=importlib`) so one `uv run pytest` runs everything.
+
+## Pause Point
+
+Development paused after completing the first pass of:
+
+- `packages/database`
+- `packages/common`
+- `packages/logging`
+- `packages/auth` (including HTTP routes in `apps/api`)
+- `apps/api`
+
+The platform is renamed to **FastForge**, auth works end-to-end against
+Supabase over HTTP, and the codebase is ready to push to GitHub. Next session
+can resume from the auth deepening track (A) or the cache package (B).

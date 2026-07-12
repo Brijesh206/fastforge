@@ -1,0 +1,20 @@
+{
+  "name": "fastforge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FastForge — Reusable SaaS Foundation",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "format": "turbo format"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  }
+}
