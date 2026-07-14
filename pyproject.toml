@@ -54,6 +54,11 @@ extend-immutable-calls = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# Packages reuse test file names (test_config.py, test_service.py, ...). The
+# importlib import mode gives each one a unique module name so they can be
+# collected together.
+addopts = "--import-mode=importlib"
+consider_namespace_packages = true
 testpaths = ["packages", "apps"]
 markers = [
     "integration: marks tests requiring a running PostgreSQL database",

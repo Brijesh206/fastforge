@@ -1,6 +1,6 @@
 # FastForge - Project Progress
 
-Last updated: 2026-07-12
+Last updated: 2026-07-14
 
 ## Current Status
 
@@ -316,9 +316,6 @@ Completed (via `uv run` on CPython 3.13.13 in the workspace `.venv`):
 
 Notes:
 
-- The per-package test-name collision when running `uv run pytest` across all
-  packages at once still exists (test dirs have no `__init__.py`); run each
-  package's tests separately, or add `--import-mode=importlib`.
 - **Security:** strong 48-byte `JWT_SECRET_KEY` and `APP_SECRET_KEY` are now set
   in the real `.env` (the PyJWT short-key warning is resolved). `.env` is
   gitignored and must never be committed.
@@ -330,10 +327,83 @@ Recommended setup on a fresh machine:
 ```bash
 uv sync --all-packages
 pnpm install
-# run per-package, e.g.:
-uv run pytest packages/auth/tests
+uv run pytest packages
 cd packages/database && uv run alembic upgrade head
 ```
+
+## Completed 2026-07-14 — Mail Package (issue #7)
+
+Package path:
+
+```text
+packages/mail
+```
+
+Transactional email, built on the standard library — **no new dependencies**
+(`smtplib` + `string.Template`, not aiosmtplib + Jinja2).
+
+- `EmailProvider` interface; `SmtpEmailProvider` (blocking `smtplib` run in a
+  worker thread via `asyncio.to_thread`) and `ConsoleEmailProvider` (logs the
+  email instead of sending it)
+- `EmailService` — the only class applications touch: `send_verification_email`,
+  `send_password_reset_email`
+- `MailSettings` (`MAIL_*` env vars). Defaults to the **console** provider, so a
+  fresh checkout cannot email a real person by accident
+- `EmailMessage` Pydantic schema — an invalid recipient is rejected before it
+  reaches a provider
+- Templates as `<name>.html`/`<name>.txt` pairs wrapped in a shared
+  `_layout.html`. Values are HTML-escaped in the HTML part (no markup injection
+  from a hostile URL or name); `$` inside a value is safe
+- `verify_email` and `password_reset` templates, both with plain-text parts
+- 16 tests, including **delivery over a real socket to a real SMTP server**
+  (stdlib sink — proves the MIME bytes and connection work, no Docker needed)
+
+Deliberately deferred (documented in `packages/mail/README.md`): retries/queue,
+rate limiting, bounce webhooks, delivery tracking, localization, attachments.
+
+### Fixes this surfaced
+
+- **No package shipped a PEP 561 `py.typed` marker**, so mypy silently treated
+  every cross-package import as untyped. Added markers to `common`, `logging`,
+  `database`, `auth`, `mail`.
+- With types now visible, mypy found a **real bug in the logging package**:
+  `bind_log_context` accepted `UUID` for `request_id`/`correlation_id`/
+  `trace_id`/`span_id`, which are `str`-only on `LogContext`. Now coerced.
+- **CI was only checking `packages/database`.** It now type-checks all five
+  implemented packages and runs every package's tests (16 tests → 70).
+- Resolved the long-standing test-name collision with
+  `--import-mode=importlib`, so one `uv run pytest packages` runs everything.
+
+## Next Development Steps
+
+Tracked on the GitHub board: <https://github.com/users/Brijesh206/projects/3>
+(milestone **v1 — Ship Week**, due 2026-07-19).
+
+### v1 — required to ship
+
+1. ~~**Email** (#7)~~ — done, above.
+2. **Email verification + password reset** (#4) — token model + migration,
+   `POST /auth/verify` and reset request/confirm endpoints, sent via
+   `EmailService` from `BackgroundTasks`. **Now unblocked.** OAuth is split out
+   of this issue and deferred to post-v1.
+3. **Stripe billing** (#6) — `BillingService` + adapter, checkout session,
+   webhook handler, subscription state on the user.
+4. **Web app** (#10) — `apps/web` does not exist yet. Next.js: sign up, log in,
+   verify, reset, pricing → checkout, one protected dashboard page.
+5. **Deploy** (#11) — API + web deployed, migrations run on release, Stripe
+   webhook reachable.
+
+### Post-v1 (explicitly cut from the week)
+
+Redis cache (#5), admin dashboard (#8), project-generator CLI (#9), OAuth,
+session persistence/revocation, roles & permissions, storage, api_keys, worker,
+analytics, notifications, observability, organizations/multi-tenancy.
+
+### Cross-cutting hardening (not gating v1)
+
+- `apps/api/tests/` (pytest + httpx) so route checks run in CI rather than as
+  ad-hoc smoke scripts.
+- Security headers middleware; CORS configuration.
 
 ## Next Development Steps
 

@@ -36,17 +36,22 @@ def get_log_context() -> LogContext:
     return context if context is not None else LogContext()
 
 
+def _as_str(value: UUID | str | None) -> str | None:
+    """Coerce a UUID to its string form for the string-only context fields."""
+    return str(value) if isinstance(value, UUID) else value
+
+
 def bind_log_context(**values: UUID | str | None) -> LogContext:
     """Merge values into the current log context."""
     current = get_log_context()
     next_context = LogContext(
-        request_id=values.get("request_id", current.request_id),
-        correlation_id=values.get("correlation_id", current.correlation_id),
+        request_id=_as_str(values.get("request_id", current.request_id)),
+        correlation_id=_as_str(values.get("correlation_id", current.correlation_id)),
         user_id=values.get("user_id", current.user_id),
         organization_id=values.get("organization_id", current.organization_id),
         api_key_id=values.get("api_key_id", current.api_key_id),
-        trace_id=values.get("trace_id", current.trace_id),
-        span_id=values.get("span_id", current.span_id),
+        trace_id=_as_str(values.get("trace_id", current.trace_id)),
+        span_id=_as_str(values.get("span_id", current.span_id)),
     )
     _log_context.set(next_context)
     return next_context

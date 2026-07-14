@@ -47,15 +47,21 @@ jobs:
         run: uv run ruff check .
 
       - name: Type check
-        run: uv run mypy packages/database/src
+        run: >-
+          uv run mypy
+          packages/common/src
+          packages/logging/src
+          packages/database/src
+          packages/auth/src
+          packages/mail/src
 
       - name: Run tests
-        run: uv run pytest -m "not integration" packages/database/tests
+        run: uv run pytest -m "not integration" packages
 
       - name: Run integration tests
         # Exit code 5 = "no tests collected". There are no integration-marked
         # tests yet, which must not fail the pipeline; any real failure still does.
-        run: uv run pytest -m integration packages/database/tests || [ "$?" -eq 5 ]
+        run: uv run pytest -m integration packages || [ "$?" -eq 5 ]
 
   # TODO: Enable when frontend is implemented
   # node:

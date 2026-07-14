@@ -1,0 +1,10 @@
+Verify your email
+
+Confirm this address to activate your $product_name account:
+
+$action_url
+
+This link expires in $expires_in. If you did not create an account, ignore
+this email.
+
+Need help? Contact $support_email

@@ -1,11 +1,18 @@
 [project]
 name = "fastforge-mail"
 version = "0.1.0"
+description = "Transactional email for FastForge"
 requires-python = ">=3.13"
-dependencies = ["fastforge-common"]
+dependencies = [
+    "fastforge-common",
+    "fastforge-logging",
+    "pydantic[email]>=2.10.0",
+    "pydantic-settings>=2.7.0",
+]
 
 [tool.uv.sources]
 fastforge-common = { workspace = true }
+fastforge-logging = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]
