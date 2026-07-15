@@ -1,6 +1,6 @@
 # FastForge - Project Progress
 
-Last updated: 2026-07-14
+Last updated: 2026-07-15
 
 ## Current Status
 
@@ -374,6 +374,46 @@ rate limiting, bounce webhooks, delivery tracking, localization, attachments.
 - Resolved the long-standing test-name collision with
   `--import-mode=importlib`, so one `uv run pytest packages` runs everything.
 
+## Completed 2026-07-15 — Email Verification & Password Reset (issue #4)
+
+Single-use, database-backed account-lifecycle tokens, now unblocked by the
+mail package.
+
+- `AuthTokenPurpose` enum, `AuthToken` model + `AuthTokenRepository`, and
+  Alembic migration `0003_create_auth_tokens_table` (applied to Supabase)
+- Tokens are `secrets.token_urlsafe(32)`; only the **SHA-256 hash** is stored,
+  so a database leak never exposes a usable link. Single use is enforced via
+  `used_at`; issuing a new token invalidates the previous one
+- `AuthService` gained `issue_email_verification_token`, `verify_email`,
+  `issue_password_reset_token`, `reset_password`. It still never imports the
+  mail package — the issuing methods return the raw token and the **app**
+  (`apps/api/app/auth/emails.py`) composes the link and schedules the send via
+  FastAPI `BackgroundTasks`, so the HTTP request never waits on SMTP
+- `issue_password_reset_token` returns `None` for unknown/inactive accounts;
+  the endpoint responds identically either way (no account enumeration)
+- New endpoints: `POST /auth/verify-email`, `POST /auth/verify-email/resend`
+  (authenticated), `POST /auth/password-reset/request`,
+  `POST /auth/password-reset/confirm`. Registration now sends a verification
+  email automatically
+- `get_current_verified_user` dependency to gate endpoints on `is_verified`
+- 12 new service unit tests (hashing, single-use, expiry, enumeration-safety).
+  Shared test fakes moved into `conftest.py` fixtures (importlib mode forbids
+  cross-test-module imports)
+- Fixed `apps/api/pyproject.toml`, which imported `fastforge_auth` without
+  declaring it; added `fastforge-auth` and `fastforge-mail`. Added `httpx` as a
+  dev dependency (FastAPI TestClient)
+
+**Verified end-to-end against live Supabase** (in-process FastAPI app, email
+service replaced with a capturing fake, 15/15 checks): register → unverified →
+login works pre-verification → verify with emailed token → `/me` now verified →
+reused verification token rejected (401) → reset request is enumeration-safe →
+reset confirm → old password rejected, new accepted → reused reset token
+rejected (401) → user cleaned up.
+
+Deferred (documented): rate limiting on these endpoints (needs Redis, post-v1);
+session/refresh-token revocation on password reset (JWT refresh is stateless
+until a sessions table exists, post-v1).
+
 ## Next Development Steps
 
 Tracked on the GitHub board: <https://github.com/users/Brijesh206/projects/3>
@@ -381,11 +421,8 @@ Tracked on the GitHub board: <https://github.com/users/Brijesh206/projects/3>
 
 ### v1 — required to ship
 
-1. ~~**Email** (#7)~~ — done, above.
-2. **Email verification + password reset** (#4) — token model + migration,
-   `POST /auth/verify` and reset request/confirm endpoints, sent via
-   `EmailService` from `BackgroundTasks`. **Now unblocked.** OAuth is split out
-   of this issue and deferred to post-v1.
+1. ~~**Email** (#7)~~ — done.
+2. ~~**Email verification + password reset** (#4)~~ — done, above.
 3. **Stripe billing** (#6) — `BillingService` + adapter, checkout session,
    webhook handler, subscription state on the user.
 4. **Web app** (#10) — `apps/web` does not exist yet. Next.js: sign up, log in,

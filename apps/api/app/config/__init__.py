@@ -15,6 +15,11 @@ class ApiSettings(BaseAppSettings):
     api_host: str = Field(default="0.0.0.0", alias="API_HOST")
     api_port: int = Field(default=8000, ge=1, le=65535, alias="API_PORT")
     api_reload: bool = Field(default=True, alias="API_RELOAD")
+    # Where the web app serves its verify-email / reset-password pages. Email
+    # links point here, not at the API.
+    frontend_base_url: str = Field(
+        default="http://localhost:3000", alias="FRONTEND_BASE_URL"
+    )
 
 
 @lru_cache

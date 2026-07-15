@@ -5,7 +5,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from fastforge_auth.constants import (
     DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES,
+    DEFAULT_EMAIL_VERIFICATION_EXPIRE_HOURS,
     DEFAULT_JWT_ALGORITHM,
+    DEFAULT_PASSWORD_RESET_EXPIRE_MINUTES,
     DEFAULT_REFRESH_TOKEN_EXPIRE_DAYS,
 )
 
@@ -31,4 +33,14 @@ class AuthSettings(BaseSettings):
         default=DEFAULT_REFRESH_TOKEN_EXPIRE_DAYS,
         ge=1,
         alias="JWT_REFRESH_TOKEN_EXPIRE_DAYS",
+    )
+    email_verification_expire_hours: int = Field(
+        default=DEFAULT_EMAIL_VERIFICATION_EXPIRE_HOURS,
+        ge=1,
+        alias="EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS",
+    )
+    password_reset_expire_minutes: int = Field(
+        default=DEFAULT_PASSWORD_RESET_EXPIRE_MINUTES,
+        ge=1,
+        alias="PASSWORD_RESET_TOKEN_EXPIRE_MINUTES",
     )

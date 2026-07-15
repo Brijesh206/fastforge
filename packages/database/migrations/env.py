@@ -8,6 +8,7 @@ from alembic import context
 # Feature packages register their models here so autogenerate can see the
 # full platform schema from this shared migrations directory. Importing a
 # model module is enough — it registers the table on Base.metadata.
+from fastforge_auth.models.auth_token import AuthToken  # noqa: F401
 from fastforge_auth.models.user import User  # noqa: F401
 from fastforge_database.config import DatabaseSettings
 from fastforge_database.models.base import Base

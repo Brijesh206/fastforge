@@ -5,18 +5,34 @@ Authentication foundation for FastForge.
 Application-managed authentication. Not tightly coupled to Supabase Auth
 or any other identity provider — see `docs/08-authentication.md`.
 
-## Responsibilities (first pass)
+## Responsibilities
 
 - Shared `User` model (UUIDv7 primary key)
-- Registration and login schemas
+- Registration, login, and account-lifecycle schemas
 - Password hashing interface + Argon2id adapter
 - Token service interface + JWT adapter (access/refresh token pair)
+- Single-use `AuthToken` model + repository for email verification and
+  password reset (hashed at rest, expiring, single-use)
 - `UserRepository` (get by id, get by email, create)
-- `AuthService` (register, authenticate)
+- `AuthService` (register, authenticate, verify email, reset password)
 - Auth-specific exceptions built on the shared `fastforge_common` error hierarchy
 
-Not yet implemented (future passes): OAuth, sessions, email verification,
-password reset, roles/permissions, organizations, API keys.
+### Account-lifecycle tokens
+
+The token-issuing methods (`issue_email_verification_token`,
+`issue_password_reset_token`) return the **raw** token for the caller to place
+in an email link; only its SHA-256 hash is stored, so a database leak never
+exposes a usable link. `verify_email` and `reset_password` consume a token,
+enforcing single use and expiry. The package **does not** send email — the
+application wires these tokens to the mail package (see
+`apps/api/app/auth/emails.py`), keeping the two feature packages independent.
+
+`issue_password_reset_token` returns `None` for an unknown or inactive
+account rather than raising, so the endpoint can respond identically whether
+or not the address exists (no account enumeration).
+
+Not yet implemented (future passes): OAuth, session persistence/revocation,
+roles/permissions, organizations, API keys.
 
 ## Usage
 

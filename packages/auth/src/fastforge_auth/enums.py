@@ -16,3 +16,10 @@ class TokenType(StrEnum):
 
     ACCESS = "access"
     REFRESH = "refresh"
+
+
+class AuthTokenPurpose(StrEnum):
+    """Purpose of a single-use, database-backed auth token."""
+
+    EMAIL_VERIFICATION = "email_verification"
+    PASSWORD_RESET = "password_reset"
