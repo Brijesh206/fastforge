@@ -414,6 +414,39 @@ Deferred (documented): rate limiting on these endpoints (needs Redis, post-v1);
 session/refresh-token revocation on password reset (JWT refresh is stateless
 until a sessions table exists, post-v1).
 
+## Completed 2026-07-15 — Stripe Billing (issue #6)
+
+Subscription billing, provider-independent by design (Stripe today).
+
+- `BillingProvider` interface; `StripeBillingProvider` is the **only** module
+  importing the Stripe SDK. Blocking Stripe calls run in a worker thread
+  (`asyncio.to_thread`). No Stripe type crosses the interface — webhooks return
+  the normalized `BillingEvent`
+- `Subscription` model (user-scoped for v1) + repository + migration
+  `0004_create_subscriptions_table` (applied to Supabase)
+- `BillingService`: `start_checkout`, `open_portal`, `handle_event` (webhook
+  sync), `get_subscription`, `is_active`. Takes user primitives (id, email), so
+  the billing package never depends on the auth package
+- **Stripe is the source of truth**: local state is written only from a
+  verified webhook, never from the checkout redirect. `handle_event` is
+  idempotent, so Stripe retries are safe
+- Endpoints: `POST /billing/checkout`, `POST /billing/portal`,
+  `GET /billing/subscription`, `POST /billing/webhook` (signature-verified, no
+  auth). `require_active_subscription` dependency as the v1 entitlement
+- 13 unit tests, including the **real** `stripe.Webhook.construct_event` crypto
+  path with a computed signature (no network, no mocked verification)
+
+**Verified end-to-end against live Supabase** (12/12): billing routes
+registered → new user starts inactive → tampered webhook rejected (400) →
+correctly-signed subscription webhook activates the subscription → status/price
+synced → cancellation webhook deactivates it (idempotent on replay) → cleaned
+up. Checkout/portal call the Stripe API and are covered by unit tests with a
+fake provider; end-to-end they need real Stripe test keys + the Stripe CLI.
+
+Deferred (documented): feature-level entitlements/usage limits (v1 gates on one
+active plan), invoice sync, coupons, trials config, tax, scheduled
+reconciliation, subscription history — all post-v1.
+
 ## Next Development Steps
 
 Tracked on the GitHub board: <https://github.com/users/Brijesh206/projects/3>
@@ -422,9 +455,9 @@ Tracked on the GitHub board: <https://github.com/users/Brijesh206/projects/3>
 ### v1 — required to ship
 
 1. ~~**Email** (#7)~~ — done.
-2. ~~**Email verification + password reset** (#4)~~ — done, above.
-3. **Stripe billing** (#6) — `BillingService` + adapter, checkout session,
-   webhook handler, subscription state on the user.
+2. ~~**Email verification + password reset** (#4)~~ — done.
+3. ~~**Stripe billing** (#6)~~ — done, above. (Needs your Stripe test keys +
+   `STRIPE_PRICE_ID` in `.env` to exercise checkout/portal live.)
 4. **Web app** (#10) — `apps/web` does not exist yet. Next.js: sign up, log in,
    verify, reset, pricing → checkout, one protected dashboard page.
 5. **Deploy** (#11) — API + web deployed, migrations run on release, Stripe

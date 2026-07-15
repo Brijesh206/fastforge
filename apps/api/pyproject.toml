@@ -11,6 +11,7 @@ dependencies = [
     "fastforge-logging",
     "fastforge-auth",
     "fastforge-mail",
+    "fastforge-billing",
 ]
 
 [tool.uv.sources]
@@ -19,6 +20,7 @@ fastforge-common = { workspace = true }
 fastforge-logging = { workspace = true }
 fastforge-auth = { workspace = true }
 fastforge-mail = { workspace = true }
+fastforge-billing = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

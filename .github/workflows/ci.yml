@@ -54,6 +54,7 @@ jobs:
           packages/database/src
           packages/auth/src
           packages/mail/src
+          packages/billing/src
 
       - name: Run tests
         run: uv run pytest -m "not integration" packages

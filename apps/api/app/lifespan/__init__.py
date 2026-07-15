@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastforge_auth import Argon2PasswordHasher, AuthSettings, JwtTokenService
+from fastforge_billing import BillingSettings, StripeBillingProvider
 from fastforge_database import DatabaseManager, DatabaseSettings
 from fastforge_logging import LoggingSettings, configure_logging, get_logger
 from fastforge_mail import EmailService, MailSettings, create_email_provider
@@ -18,12 +19,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     configure_logging(LoggingSettings(service_name="api"))
     auth_settings = AuthSettings()
     mail_settings = MailSettings()
+    billing_settings = BillingSettings()
 
     app.state.database_manager = DatabaseManager(DatabaseSettings())
     app.state.password_hasher = Argon2PasswordHasher()
     app.state.token_service = JwtTokenService(auth_settings)
     app.state.auth_settings = auth_settings
     app.state.email_service = EmailService(create_email_provider(mail_settings), mail_settings)
+    app.state.billing_settings = billing_settings
+    app.state.billing_provider = StripeBillingProvider(billing_settings)
     logger.info("API startup complete", mail_provider=mail_settings.provider)
     try:
         yield

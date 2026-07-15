@@ -1,12 +1,21 @@
 [project]
 name = "fastforge-billing"
 version = "0.1.0"
+description = "Subscription billing for FastForge"
 requires-python = ">=3.13"
-dependencies = ["fastforge-database", "fastforge-common"]
+dependencies = [
+    "fastforge-database",
+    "fastforge-common",
+    "fastforge-logging",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+    "stripe>=11.0.0",
+]
 
 [tool.uv.sources]
 fastforge-database = { workspace = true }
 fastforge-common = { workspace = true }
+fastforge-logging = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]
