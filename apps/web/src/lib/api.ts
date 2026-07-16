@@ -1,0 +1,159 @@
+import { API_URL } from "@/lib/config";
+import type {
+  CheckoutSession,
+  MessageResponse,
+  PortalSession,
+  Subscription,
+  TokenPair,
+  User,
+} from "@/lib/types";
+
+const ACCESS_KEY = "ff_access";
+const REFRESH_KEY = "ff_refresh";
+
+/** An API call that returned a non-2xx status. `status` is the HTTP code. */
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
+/** Tokens live in localStorage so the SPA survives reloads.
+ *  ponytail: localStorage + Bearer matches the API contract (tokens returned in
+ *  the body). httpOnly-cookie sessions are the XSS-hardening upgrade — needs the
+ *  API to set cookies + CORS credentials, so defer until security review. */
+export const tokenStore = {
+  get access(): string | null {
+    return typeof window === "undefined" ? null : localStorage.getItem(ACCESS_KEY);
+  },
+  get refresh(): string | null {
+    return typeof window === "undefined" ? null : localStorage.getItem(REFRESH_KEY);
+  },
+  save(pair: TokenPair): void {
+    localStorage.setItem(ACCESS_KEY, pair.access_token);
+    localStorage.setItem(REFRESH_KEY, pair.refresh_token);
+  },
+  clear(): void {
+    localStorage.removeItem(ACCESS_KEY);
+    localStorage.removeItem(REFRESH_KEY);
+  },
+};
+
+/** FastAPI puts errors in `detail`: a string, or a validation-error array. */
+async function messageFrom(res: Response): Promise<string> {
+  try {
+    const data = await res.json();
+    const detail = data?.detail;
+    if (typeof detail === "string") return detail;
+    if (Array.isArray(detail) && detail[0]?.msg) return detail[0].msg;
+  } catch {
+    /* non-JSON body */
+  }
+  return `Request failed (${res.status})`;
+}
+
+async function tryRefresh(): Promise<boolean> {
+  const refresh = tokenStore.refresh;
+  if (!refresh) return false;
+  try {
+    const res = await fetch(`${API_URL}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refresh }),
+    });
+    if (!res.ok) {
+      tokenStore.clear();
+      return false;
+    }
+    tokenStore.save((await res.json()) as TokenPair);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+interface RequestOptions {
+  method?: string;
+  body?: unknown;
+  auth?: boolean;
+  _retried?: boolean;
+}
+
+async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const { method = "GET", body, auth = false, _retried = false } = options;
+
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (auth && tokenStore.access) {
+    headers.Authorization = `Bearer ${tokenStore.access}`;
+  }
+
+  const res = await fetch(`${API_URL}${path}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+
+  // One transparent refresh + retry on an expired access token.
+  if (res.status === 401 && auth && !_retried && (await tryRefresh())) {
+    return request<T>(path, { ...options, _retried: true });
+  }
+
+  if (!res.ok) {
+    throw new ApiError(res.status, await messageFrom(res));
+  }
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
+}
+
+export const api = {
+  register: (payload: { email: string; password: string; full_name?: string }) =>
+    request<User>("/auth/register", { method: "POST", body: payload }),
+
+  login: async (payload: { email: string; password: string }) => {
+    const pair = await request<TokenPair>("/auth/login", {
+      method: "POST",
+      body: payload,
+    });
+    tokenStore.save(pair);
+    return pair;
+  },
+
+  logout: () => tokenStore.clear(),
+
+  me: () => request<User>("/auth/me", { auth: true }),
+
+  verifyEmail: (token: string) =>
+    request<MessageResponse>("/auth/verify-email", {
+      method: "POST",
+      body: { token },
+    }),
+
+  resendVerification: () =>
+    request<MessageResponse>("/auth/verify-email/resend", {
+      method: "POST",
+      auth: true,
+    }),
+
+  requestPasswordReset: (email: string) =>
+    request<MessageResponse>("/auth/password-reset/request", {
+      method: "POST",
+      body: { email },
+    }),
+
+  confirmPasswordReset: (token: string, new_password: string) =>
+    request<MessageResponse>("/auth/password-reset/confirm", {
+      method: "POST",
+      body: { token, new_password },
+    }),
+
+  getSubscription: () => request<Subscription>("/billing/subscription", { auth: true }),
+
+  startCheckout: () =>
+    request<CheckoutSession>("/billing/checkout", { method: "POST", auth: true }),
+
+  openPortal: () =>
+    request<PortalSession>("/billing/portal", { method: "POST", auth: true }),
+};

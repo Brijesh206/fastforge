@@ -16,6 +16,12 @@ build/
 .env.local
 .env.*.local
 
+# MCP config (contains API keys)
+.mcp.json
+
+# Local Claude Code tooling (skills, settings)
+.claude/
+
 # IDE
 .idea/
 .vscode/

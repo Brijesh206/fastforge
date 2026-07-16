@@ -64,16 +64,25 @@ jobs:
         # tests yet, which must not fail the pipeline; any real failure still does.
         run: uv run pytest -m integration packages || [ "$?" -eq 5 ]
 
-  # TODO: Enable when frontend is implemented
-  # node:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: pnpm/action-setup@v4
-  #     - uses: actions/setup-node@v4
-  #       with:
-  #         node-version: 20
-  #         cache: pnpm
-  #     - run: pnpm install
-  #     - run: pnpm lint
-  #     - run: pnpm test
+  web:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # `next build` runs ESLint and TypeScript type-checking, so this one step
+      # covers lint, types, and a production compile.
+      - name: Build web app
+        run: pnpm --filter @fastforge/web build

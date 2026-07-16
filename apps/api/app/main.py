@@ -7,6 +7,7 @@ from app.api.router import api_router
 from app.config import get_settings
 from app.core.errors import register_exception_handlers
 from app.lifespan import lifespan
+from app.middleware.cors import register_cors_middleware
 from app.middleware.request_logging import register_request_logging_middleware
 
 
@@ -20,6 +21,7 @@ def create_app() -> FastAPI:
     )
     register_exception_handlers(api)
     register_request_logging_middleware(api)
+    register_cors_middleware(api)
     api.include_router(api_router, prefix=DEFAULT_API_PREFIX)
     return api
 
