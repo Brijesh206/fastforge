@@ -3,8 +3,8 @@ import { cn } from "@/lib/utils";
 type Variant = "info" | "success" | "error";
 
 const variants: Record<Variant, string> = {
-  info: "border-secondary/30 bg-secondary/5 text-secondary",
-  success: "border-accent/30 bg-accent/5 text-accent",
+  info: "border-accent/30 bg-accent/5 text-accent",
+  success: "border-success/30 bg-success/5 text-success",
   error: "border-destructive/30 bg-destructive/5 text-destructive",
 };
 

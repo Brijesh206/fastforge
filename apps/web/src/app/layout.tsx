@@ -1,21 +1,19 @@
 import type { Metadata } from "next";
-import { Open_Sans, Poppins } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 
 import { SessionProvider } from "@/providers/session-provider";
 import { APP_NAME } from "@/lib/config";
 import "../styles/globals.css";
 
-const openSans = Open_Sans({
+const geistSans = Geist({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-open-sans",
+  variable: "--font-geist-sans",
   display: "swap",
 });
 
-const poppins = Poppins({
+const geistMono = Geist_Mono({
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  variable: "--font-poppins",
+  variable: "--font-geist-mono",
   display: "swap",
 });
 
@@ -32,7 +30,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${openSans.variable} ${poppins.variable}`}>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>
         <SessionProvider>{children}</SessionProvider>
       </body>

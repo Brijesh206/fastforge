@@ -30,7 +30,7 @@ export function Logo({
         <rect width="32" height="32" rx="8" className="fill-primary" />
         <path
           d="M11 9h11l-1.6 4H14l-.7 2.8h5.4l-1.6 4H12l-1.4 5H8L11 9z"
-          className="fill-accent"
+          className="fill-primary-foreground"
         />
       </svg>
       {APP_NAME}

@@ -88,9 +88,9 @@ function ResetPasswordForm() {
               name="password"
               type="password"
               required
-              minLength={8}
+              minLength={12}
               autoComplete="new-password"
-              placeholder="At least 8 characters"
+              placeholder="At least 12 characters"
             />
           </div>
 

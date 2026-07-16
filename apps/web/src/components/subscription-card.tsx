@@ -116,7 +116,6 @@ export function SubscriptionCard() {
               set.
             </p>
             <Button
-              variant="accent"
               onClick={() => goToStripe("checkout")}
               loading={redirecting}
             >

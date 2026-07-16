@@ -66,11 +66,11 @@ export default function LandingPage() {
         {/* Hero */}
         <section className="mx-auto max-w-6xl px-4 py-20 text-center sm:py-28">
           <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-sm font-medium text-muted-foreground">
-            <Sparkles className="h-4 w-4 text-accent" />
+            <Sparkles className="h-4 w-4 text-primary" />
             The SaaS foundation that ships itself
           </span>
           <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-bold leading-tight text-foreground sm:text-5xl md:text-6xl">
-            Launch your product, not your boilerplate
+            Ship your next SaaS in a weekend, not a quarter
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
             {APP_NAME} gives you authentication, subscription billing, and a
@@ -176,7 +176,7 @@ export default function LandingPage() {
                       </li>
                     ))}
                   </ul>
-                  <CheckoutButton variant="accent" className="mt-8 w-full">
+                  <CheckoutButton className="mt-8 w-full">
                     Subscribe to Pro
                   </CheckoutButton>
                 </CardContent>

@@ -4,7 +4,7 @@ type Variant = "neutral" | "success" | "warning" | "danger";
 
 const variants: Record<Variant, string> = {
   neutral: "bg-muted text-muted-foreground",
-  success: "bg-accent/10 text-accent",
+  success: "bg-success/10 text-success",
   warning: "bg-amber-100 text-amber-700",
   danger: "bg-destructive/10 text-destructive",
 };
