@@ -1,0 +1,6 @@
+# Caddy terminates TLS (auto Let's Encrypt) and proxies to the API container.
+# API_DOMAIN comes from the environment, e.g. api.yourdomain.com
+{$API_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy api:8000
+}

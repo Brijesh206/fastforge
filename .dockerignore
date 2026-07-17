@@ -1,0 +1,32 @@
+# Keep the build context small and deterministic.
+.git
+.github
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+
+# Virtualenvs / node — rebuilt inside the image, never copied in.
+.venv
+**/.venv
+node_modules
+**/node_modules
+
+# The API image doesn't need the web app.
+apps/web
+
+# Never ship secrets.
+.env
+**/.env
+!*.env.example
+
+# Local-only cruft.
+docker-compose.yml
+*.log
+dist
+build
+.claude
+.agents
+.continue
+.windsurf
