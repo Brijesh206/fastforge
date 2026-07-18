@@ -1,5 +1,9 @@
 import { API_URL } from "@/lib/config";
 import type {
+  AdminStats,
+  AdminUserDetail,
+  AdminUserItem,
+  AdminUserList,
   CheckoutSession,
   MessageResponse,
   PortalSession,
@@ -156,4 +160,22 @@ export const api = {
 
   openPortal: () =>
     request<PortalSession>("/billing/portal", { method: "POST", auth: true }),
+
+  admin: {
+    stats: () => request<AdminStats>("/admin/stats", { auth: true }),
+
+    users: ({ page = 1, pageSize = 20, q = "" }: { page?: number; pageSize?: number; q?: string }) => {
+      const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+      if (q) params.set("q", q);
+      return request<AdminUserList>(`/admin/users?${params.toString()}`, { auth: true });
+    },
+
+    user: (id: string) => request<AdminUserDetail>(`/admin/users/${id}`, { auth: true }),
+
+    activate: (id: string) =>
+      request<AdminUserItem>(`/admin/users/${id}/activate`, { method: "POST", auth: true }),
+
+    deactivate: (id: string) =>
+      request<AdminUserItem>(`/admin/users/${id}/deactivate`, { method: "POST", auth: true }),
+  },
 };

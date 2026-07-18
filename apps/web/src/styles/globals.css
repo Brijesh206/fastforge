@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+/* daisyUI powers the admin panel only. `root: ".ff-admin"` scopes its theme
+   variables + base styles to the admin subtree, so the FastForge brand pages
+   (landing / auth / dashboard) are never repainted. Themes switch via
+   data-theme on the .ff-admin container (see src/app/admin). */
+@plugin "daisyui" {
+  themes: light --default, dark, corporate, business, emerald, synthwave,
+    retro, dracula, night, forest, luxury, nord, winter, autumn, coffee, dim,
+    sunset, cupcake, valentine, lofi;
+  root: ".ff-admin";
+}
+
 /* Design tokens — matched to the FastForge brand (fastforge.pionetix.com):
    warm-cream light theme, gold primary, blue accent, Geist typography. */
 @theme {
