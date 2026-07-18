@@ -36,6 +36,7 @@ def _subscription_event_payload() -> bytes:
         "id": "evt_1",
         "object": "event",
         "type": "customer.subscription.updated",
+        "created": 1893456000,
         "data": {
             "object": {
                 "id": "sub_123",
@@ -64,6 +65,7 @@ def test_parse_webhook_verifies_and_normalizes_subscription_event() -> None:
     assert event.subscription.price_id == "price_123"
     assert event.subscription.current_period_end is not None
     assert event.subscription.cancel_at_period_end is False
+    assert event.created_at.isoformat() == "2030-01-01T00:00:00+00:00"
 
 
 def test_parse_webhook_ignores_non_subscription_events() -> None:
@@ -72,6 +74,7 @@ def test_parse_webhook_ignores_non_subscription_events() -> None:
             "id": "evt_2",
             "object": "event",
             "type": "invoice.paid",
+            "created": 1893369600,
             "data": {"object": {"id": "in_1", "object": "invoice"}},
         }
     ).encode()

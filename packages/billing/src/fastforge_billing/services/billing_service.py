@@ -86,7 +86,10 @@ class BillingService:
 
         Idempotent: syncing the same event twice yields the same row. Events
         the platform does not act on (``event.subscription is None``) are
-        ignored.
+        ignored. Events older than the last-applied one are also ignored —
+        Stripe retries and redeliveries are not guaranteed to arrive in
+        order, and applying a stale event after a newer one would clobber
+        fresher state with old data.
         """
         if event.subscription is None:
             return
@@ -101,6 +104,18 @@ class BillingService:
             )
             return
 
+        last_event_at = subscription.last_event_at
+        if last_event_at is not None and event.created_at <= last_event_at:
+            logger.warning(
+                "Out-of-order webhook event; ignoring",
+                stripe_customer_id=data.customer_id,
+                event_type=event.type,
+                event_created_at=event.created_at.isoformat(),
+                last_event_at=last_event_at.isoformat(),
+            )
+            return
+
+        subscription.last_event_at = event.created_at
         subscription.stripe_subscription_id = data.subscription_id
         subscription.status = data.status
         subscription.price_id = data.price_id

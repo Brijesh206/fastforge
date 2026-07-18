@@ -28,11 +28,14 @@ class BillingEvent(BaseModel):
 
     ``subscription`` is populated only for events the platform acts on
     (subscription lifecycle); it is None for events the service ignores.
+    ``created_at`` is the event's own timestamp (when Stripe generated it),
+    used to detect and skip out-of-order redelivery — not when we received it.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     type: str
+    created_at: datetime
     subscription: SubscriptionData | None = None
 
 

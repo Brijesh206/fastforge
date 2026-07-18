@@ -36,3 +36,10 @@ class Subscription(BaseModel):
         DateTime(timezone=True), nullable=True, default=None
     )
     cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # The source event's Stripe-side `created` timestamp, not when we applied
+    # it. Lets handle_event reject a redelivered/retried older event that
+    # arrives after a newer one already landed, instead of clobbering fresher
+    # state. None until the first webhook is applied.
+    last_event_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )

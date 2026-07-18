@@ -99,9 +99,11 @@ def make_sub_event() -> SubEventFactory:
         subscription_id: str = "sub_1",
         status: str = "active",
         event_type: str = "customer.subscription.updated",
+        created_at: datetime | None = None,
     ) -> BillingEvent:
         return BillingEvent(
             type=event_type,
+            created_at=created_at or datetime.now(UTC),
             subscription=SubscriptionData(
                 customer_id=customer_id,
                 subscription_id=subscription_id,

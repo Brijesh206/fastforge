@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
 from fastforge_billing.exceptions import BillingNotConfiguredError
 from fastforge_billing.models.subscription import Subscription
+from fastforge_billing.schemas import BillingEvent
 from fastforge_billing.services.billing_service import BillingService
 
 if TYPE_CHECKING:
@@ -150,11 +152,63 @@ async def test_handle_event_ignores_unknown_customer(
 async def test_handle_event_ignores_non_subscription_events(
     billing_service: BillingService, fake_subscriptions: FakeSubscriptionRepository
 ) -> None:
-    from fastforge_billing.schemas import BillingEvent
-
-    await billing_service.handle_event(BillingEvent(type="invoice.paid"))
+    await billing_service.handle_event(
+        BillingEvent(type="invoice.paid", created_at=datetime.now(UTC))
+    )
 
     assert fake_subscriptions.rows == []
+
+
+async def test_handle_event_ignores_an_out_of_order_event(
+    billing_service: BillingService,
+    fake_subscriptions: FakeSubscriptionRepository,
+    make_sub_event: SubEventFactory,
+) -> None:
+    user_id = uuid4()
+    await fake_subscriptions.create(
+        Subscription(user_id=user_id, stripe_customer_id="cus_1")
+    )
+    newer = make_sub_event(
+        customer_id="cus_1", status="active", created_at=datetime(2030, 1, 2, tzinfo=UTC)
+    )
+    older = make_sub_event(
+        customer_id="cus_1",
+        status="past_due",
+        created_at=datetime(2030, 1, 1, tzinfo=UTC),
+    )
+
+    await billing_service.handle_event(newer)
+    await billing_service.handle_event(older)  # redelivered/retried, arrives late
+
+    row = await fake_subscriptions.get_by_user_id(user_id)
+    assert row is not None
+    assert row.status == "active"  # the older event never overwrote it
+
+
+async def test_handle_event_applies_a_newer_event_after_an_older_one(
+    billing_service: BillingService,
+    fake_subscriptions: FakeSubscriptionRepository,
+    make_sub_event: SubEventFactory,
+) -> None:
+    user_id = uuid4()
+    await fake_subscriptions.create(
+        Subscription(user_id=user_id, stripe_customer_id="cus_1")
+    )
+    older = make_sub_event(
+        customer_id="cus_1", status="active", created_at=datetime(2030, 1, 1, tzinfo=UTC)
+    )
+    newer = make_sub_event(
+        customer_id="cus_1",
+        status="past_due",
+        created_at=datetime(2030, 1, 2, tzinfo=UTC),
+    )
+
+    await billing_service.handle_event(older)
+    await billing_service.handle_event(newer)
+
+    row = await fake_subscriptions.get_by_user_id(user_id)
+    assert row is not None
+    assert row.status == "past_due"
 
 
 def test_is_active_is_false_for_none(billing_service: BillingService) -> None:

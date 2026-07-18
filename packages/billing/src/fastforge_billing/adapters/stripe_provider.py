@@ -87,10 +87,12 @@ class StripeBillingProvider(BillingProvider):
         # navigating Stripe's object wrappers.
         event = json.loads(payload)
         event_type: str = event["type"]
+        created_at = datetime.fromtimestamp(event["created"], UTC)
         if not event_type.startswith(_SUBSCRIPTION_EVENT_PREFIX):
-            return BillingEvent(type=event_type)
+            return BillingEvent(type=event_type, created_at=created_at)
         return BillingEvent(
             type=event_type,
+            created_at=created_at,
             subscription=_subscription_from(event["data"]["object"]),
         )
 
