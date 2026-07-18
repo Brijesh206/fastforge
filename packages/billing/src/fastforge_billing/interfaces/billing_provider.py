@@ -28,6 +28,10 @@ class BillingProvider(ABC):
         """Create a billing portal session and return its URL."""
 
     @abstractmethod
+    async def cancel_subscription(self, *, subscription_id: str) -> None:
+        """Cancel a subscription immediately (not at period end)."""
+
+    @abstractmethod
     def parse_webhook(self, *, payload: bytes, signature: str) -> BillingEvent:
         """Verify a webhook's signature and return the normalized event.
 

@@ -68,6 +68,10 @@ class StripeBillingProvider(BillingProvider):
         )
         return session.url
 
+    async def cancel_subscription(self, *, subscription_id: str) -> None:
+        client = self._client()
+        await asyncio.to_thread(client.v1.subscriptions.cancel, subscription_id)
+
     def parse_webhook(self, *, payload: bytes, signature: str) -> BillingEvent:
         secret = self._settings.webhook_secret.get_secret_value()
         if not secret:

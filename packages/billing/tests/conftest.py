@@ -41,6 +41,7 @@ class FakeBillingProvider(BillingProvider):
         self.created_customers: list[tuple[str, str]] = []
         self.checkout_calls: list[dict[str, str]] = []
         self.portal_calls: list[dict[str, str]] = []
+        self.canceled_subscriptions: list[str] = []
         self.next_event: BillingEvent | None = None
 
     async def create_customer(self, *, email: str, user_id: str) -> str:
@@ -56,6 +57,9 @@ class FakeBillingProvider(BillingProvider):
     async def create_portal_session(self, *, customer_id: str, return_url: str) -> str:
         self.portal_calls.append({"customer_id": customer_id, "return_url": return_url})
         return f"https://portal.stripe.test/{customer_id}"
+
+    async def cancel_subscription(self, *, subscription_id: str) -> None:
+        self.canceled_subscriptions.append(subscription_id)
 
     def parse_webhook(self, *, payload: bytes, signature: str) -> BillingEvent:
         assert self.next_event is not None

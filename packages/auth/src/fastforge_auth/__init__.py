@@ -17,7 +17,12 @@ from fastforge_auth.models.auth_token import AuthToken
 from fastforge_auth.models.user import User
 from fastforge_auth.repositories.auth_token import AuthTokenRepository
 from fastforge_auth.repositories.user import UserRepository
-from fastforge_auth.schemas.auth import LoginRequest, RefreshRequest, TokenPair
+from fastforge_auth.schemas.auth import (
+    AccountDeleteRequest,
+    LoginRequest,
+    RefreshRequest,
+    TokenPair,
+)
 from fastforge_auth.schemas.user import UserCreate, UserResponse
 from fastforge_auth.schemas.verification import (
     MessageResponse,
@@ -28,6 +33,7 @@ from fastforge_auth.schemas.verification import (
 from fastforge_auth.services.auth_service import AuthService
 
 __all__ = [
+    "AccountDeleteRequest",
     "Argon2PasswordHasher",
     "AuthProvider",
     "AuthService",

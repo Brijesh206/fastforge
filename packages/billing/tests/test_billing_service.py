@@ -159,3 +159,51 @@ async def test_handle_event_ignores_non_subscription_events(
 
 def test_is_active_is_false_for_none(billing_service: BillingService) -> None:
     assert billing_service.is_active(None) is False
+
+
+async def test_cancel_active_subscription_calls_provider(
+    billing_service: BillingService,
+    fake_subscriptions: FakeSubscriptionRepository,
+    fake_provider: FakeBillingProvider,
+) -> None:
+    user_id = uuid4()
+    await fake_subscriptions.create(
+        Subscription(
+            user_id=user_id,
+            stripe_customer_id="cus_1",
+            stripe_subscription_id="sub_1",
+            status="active",
+        )
+    )
+
+    await billing_service.cancel_active_subscription(user_id)
+
+    assert fake_provider.canceled_subscriptions == ["sub_1"]
+
+
+async def test_cancel_active_subscription_is_noop_without_a_subscription_row(
+    billing_service: BillingService, fake_provider: FakeBillingProvider
+) -> None:
+    await billing_service.cancel_active_subscription(uuid4())
+
+    assert fake_provider.canceled_subscriptions == []
+
+
+async def test_cancel_active_subscription_is_noop_when_not_active(
+    billing_service: BillingService,
+    fake_subscriptions: FakeSubscriptionRepository,
+    fake_provider: FakeBillingProvider,
+) -> None:
+    user_id = uuid4()
+    await fake_subscriptions.create(
+        Subscription(
+            user_id=user_id,
+            stripe_customer_id="cus_1",
+            stripe_subscription_id="sub_1",
+            status="canceled",
+        )
+    )
+
+    await billing_service.cancel_active_subscription(user_id)
+
+    assert fake_provider.canceled_subscriptions == []

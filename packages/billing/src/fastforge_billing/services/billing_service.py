@@ -65,6 +65,22 @@ class BillingService:
             customer_id=subscription.stripe_customer_id, return_url=return_url
         )
 
+    async def cancel_active_subscription(self, user_id: UUID) -> None:
+        """Cancel the user's Stripe subscription immediately, if one is active.
+
+        No-op if the user has no subscription or it isn't active. Used by
+        account deletion so a removed account doesn't keep being billed —
+        the local row is left for the webhook (or the caller) to clean up.
+        """
+        subscription = await self._subscriptions.get_by_user_id(user_id)
+        if subscription is None or subscription.stripe_subscription_id is None:
+            return
+        if subscription.status not in ACTIVE_STATUSES:
+            return
+        await self._provider.cancel_subscription(
+            subscription_id=subscription.stripe_subscription_id
+        )
+
     async def handle_event(self, event: BillingEvent) -> None:
         """Apply a verified webhook event to local subscription state.
 

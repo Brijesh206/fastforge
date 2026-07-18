@@ -9,6 +9,7 @@ from http import HTTPStatus
 
 from fastapi import APIRouter, BackgroundTasks, Depends
 from fastforge_auth import (
+    AccountDeleteRequest,
     AuthService,
     AuthSettings,
     LoginRequest,
@@ -22,6 +23,7 @@ from fastforge_auth import (
     UserResponse,
     VerifyEmailRequest,
 )
+from fastforge_billing import BillingService
 from fastforge_mail import EmailService
 
 from app.auth.dependencies import (
@@ -31,6 +33,7 @@ from app.auth.dependencies import (
     get_email_service,
 )
 from app.auth.emails import schedule_password_reset_email, schedule_verification_email
+from app.billing.dependencies import get_billing_service
 from app.config import get_settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -161,3 +164,22 @@ async def confirm_password_reset(
     """Set a new password using a valid reset token."""
     await service.reset_password(payload.token, payload.new_password)
     return MessageResponse(detail="Password updated.")
+
+
+@router.delete("/me", status_code=HTTPStatus.NO_CONTENT)
+async def delete_account(
+    payload: AccountDeleteRequest,
+    current_user: User = Depends(get_current_user),
+    service: AuthService = Depends(get_auth_service),
+    billing_service: BillingService = Depends(get_billing_service),
+) -> None:
+    """Permanently delete the authenticated user's account.
+
+    Verifies the password first (no side effects on a wrong password), then
+    cancels any active Stripe subscription so deletion doesn't leave the user
+    being billed, then deletes the account. auth_tokens and the subscription
+    row cascade via foreign keys.
+    """
+    service.verify_current_password(current_user, payload.password)
+    await billing_service.cancel_active_subscription(current_user.id)
+    await service.delete_account(current_user.id)

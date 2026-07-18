@@ -41,6 +41,10 @@ class FakeUserRepository:
         self.users_by_id[instance.id] = instance
         return instance
 
+    async def delete(self, instance: User) -> None:
+        self.users_by_email.pop(instance.email, None)
+        self.users_by_id.pop(instance.id, None)
+
 
 class FakeAuthTokenRepository:
     """In-memory stand-in for AuthTokenRepository."""

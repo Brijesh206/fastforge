@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
-from fastforge_auth.exceptions import InvalidTokenError
+from fastforge_auth.exceptions import InvalidCredentialsError, InvalidTokenError, UserNotFoundError
 from fastforge_auth.models.user import User
 from fastforge_auth.tokens import hash_token
 
@@ -138,3 +138,44 @@ async def test_issue_password_reset_returns_none_for_inactive_user(
     user.is_active = False
 
     assert await auth_service.issue_password_reset_token(user.email) is None
+
+
+def test_verify_current_password_accepts_correct_password(
+    auth_service: AuthService, fake_users: FakeUserRepository
+) -> None:
+    user = _add_user(fake_users)  # password_hash="hashed:old"
+
+    auth_service.verify_current_password(user, "old")  # does not raise
+
+
+def test_verify_current_password_rejects_wrong_password(
+    auth_service: AuthService, fake_users: FakeUserRepository
+) -> None:
+    user = _add_user(fake_users)
+
+    with pytest.raises(InvalidCredentialsError):
+        auth_service.verify_current_password(user, "wrong")
+
+
+def test_verify_current_password_is_noop_without_a_password_hash(
+    auth_service: AuthService,
+) -> None:
+    user = User(email="oauth@example.com", password_hash=None)
+
+    auth_service.verify_current_password(user, "anything")  # does not raise
+
+
+async def test_delete_account_removes_the_user(
+    auth_service: AuthService, fake_users: FakeUserRepository
+) -> None:
+    user = _add_user(fake_users)
+
+    await auth_service.delete_account(user.id)
+
+    assert await fake_users.get_by_id(user.id) is None
+    assert await fake_users.get_by_email(user.email) is None
+
+
+async def test_delete_account_raises_for_unknown_user(auth_service: AuthService) -> None:
+    with pytest.raises(UserNotFoundError):
+        await auth_service.delete_account(uuid4())

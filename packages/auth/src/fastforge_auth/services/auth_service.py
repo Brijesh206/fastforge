@@ -1,6 +1,7 @@
 """Authentication service — registration, login, and account lifecycle."""
 
 from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
 from fastforge_auth.constants import (
     DEFAULT_EMAIL_VERIFICATION_EXPIRE_HOURS,
@@ -12,6 +13,7 @@ from fastforge_auth.exceptions import (
     InvalidCredentialsError,
     InvalidTokenError,
     UserAlreadyExistsError,
+    UserNotFoundError,
 )
 from fastforge_auth.interfaces.password_hasher import PasswordHasher
 from fastforge_auth.interfaces.token_service import TokenService
@@ -169,6 +171,34 @@ class AuthService:
 
         user.password_hash = self._password_hasher.hash(new_password)
         return await self._user_repository.update(user)
+
+    def verify_current_password(self, user: User, password: str) -> None:
+        """Re-check a password before a destructive action (e.g. account deletion).
+
+        A no-op if the account has no password set (not reachable today since
+        registration always sets one, but password_hash is nullable for a
+        future OAuth-only user) — there is nothing to verify against, so the
+        caller's existing authentication is trusted.
+
+        Raises InvalidCredentialsError if a password is set and doesn't match.
+        """
+        if user.password_hash is None:
+            return
+        if not self._password_hasher.verify(password, user.password_hash):
+            raise InvalidCredentialsError()
+
+    async def delete_account(self, user_id: UUID) -> None:
+        """Permanently delete a user and their data.
+
+        Hard delete: auth_tokens and subscriptions cascade via their foreign
+        keys. Callers should verify the password (verify_current_password)
+        and cancel any active subscription before calling this — deleting the
+        row first would abandon a live Stripe subscription.
+        """
+        user = await self._user_repository.get_by_id(user_id)
+        if user is None:
+            raise UserNotFoundError()
+        await self._user_repository.delete(user)
 
     async def _issue_token(
         self, user: User, purpose: AuthTokenPurpose, ttl: timedelta

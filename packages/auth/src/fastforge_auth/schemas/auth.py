@@ -18,6 +18,14 @@ class LoginRequest(BaseModel):
         return value.strip().lower()
 
 
+class AccountDeleteRequest(BaseModel):
+    """Payload confirming a user's password before deleting their own account."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    password: str = Field(..., min_length=1)
+
+
 class RefreshRequest(BaseModel):
     """Payload for exchanging a refresh token for a new token pair."""
 
