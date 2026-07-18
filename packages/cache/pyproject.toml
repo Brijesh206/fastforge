@@ -2,7 +2,7 @@
 name = "fastforge-cache"
 version = "0.1.0"
 requires-python = ">=3.13"
-dependencies = ["fastforge-common"]
+dependencies = ["fastforge-common", "redis>=5.0", "pydantic-settings>=2.7.0"]
 
 [tool.uv.sources]
 fastforge-common = { workspace = true }
