@@ -54,3 +54,6 @@ class InMemoryCache(Cache):
             if new_value == 1 and ttl_seconds is not None:
                 self._expires_at[key] = time.monotonic() + ttl_seconds
             return new_value
+
+    async def close(self) -> None:
+        """No resources to release — kept for interface parity with RedisCache."""

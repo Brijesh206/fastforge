@@ -32,3 +32,7 @@ class Cache(ABC):
         incr safe to use directly as a fixed-window rate-limit counter:
         ``count = await cache.incr(f"rl:{key}", ttl_seconds=60)``.
         """
+
+    @abstractmethod
+    async def close(self) -> None:
+        """Release any held resources (connections, pools). Call at shutdown."""
