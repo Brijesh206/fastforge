@@ -2,6 +2,7 @@
 
 from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastforge_api_keys import API_KEY_PREFIX
 from fastforge_auth import (
     AuthService,
     AuthSettings,
@@ -15,6 +16,7 @@ from fastforge_common.exceptions import AuthenticationError
 from fastforge_mail import EmailService
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api_keys.dependencies import authenticate_via_api_key
 from app.dependencies.database import get_db_session, get_db_transaction
 
 _bearer_scheme = HTTPBearer(auto_error=False)
@@ -58,19 +60,28 @@ def get_auth_service(
 
 
 async def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
     session: AsyncSession = Depends(get_db_session),
     token_service: TokenService = Depends(get_token_service),
 ) -> User:
-    """Resolve the authenticated user from a Bearer access token.
+    """Resolve the authenticated user from a Bearer token — a JWT access
+    token or an API key (``ffk_...``), either is accepted in the same header.
 
-    Raises AuthenticationError when the token is missing, invalid, or the
-    resolved user is missing or inactive.
+    Raises AuthenticationError when the token is missing or invalid,
+    RateLimitError if an API key has exceeded its rate limit, and
+    AuthenticationError if the resolved user is missing or inactive.
     """
     if credentials is None or not credentials.credentials:
         raise AuthenticationError("Missing bearer token.")
 
-    user_id = token_service.decode_access_token(credentials.credentials)
+    token = credentials.credentials
+    if token.startswith(API_KEY_PREFIX):
+        # Only requests actually presenting an API key pay for the extra
+        # transactional session this needs — the JWT path below does not.
+        user_id = await authenticate_via_api_key(request, token)
+    else:
+        user_id = token_service.decode_access_token(token)
 
     user = await UserRepository(session).get_by_id(user_id)
     if user is None or not user.is_active:

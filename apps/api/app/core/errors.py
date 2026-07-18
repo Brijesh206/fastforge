@@ -5,7 +5,7 @@ from http import HTTPStatus
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from fastforge_common.exceptions import AppError, ErrorCode
+from fastforge_common.exceptions import AppError, ErrorCode, RateLimitError
 from fastforge_common.schemas import ErrorDetail, ErrorResponse
 from fastforge_logging import get_logger
 
@@ -26,9 +26,13 @@ async def app_error_handler(_request: Request, exc: AppError) -> JSONResponse:
         error_code=exc.code,
         status_code=exc.status_code,
     )
+    headers = None
+    if isinstance(exc, RateLimitError) and exc.retry_after_seconds is not None:
+        headers = {"Retry-After": str(exc.retry_after_seconds)}
     return JSONResponse(
         status_code=exc.status_code,
         content=exc.to_response().model_dump(mode="json"),
+        headers=headers,
     )
 
 

@@ -14,6 +14,7 @@ from fastforge_common.exceptions import (
     RateLimitError,
 )
 from fastforge_common.schemas import ErrorDetail, ErrorResponse
+from fastforge_common.tokens import generate_secret, hash_secret
 
 __all__ = [
     "DEFAULT_API_PREFIX",
@@ -31,4 +32,6 @@ __all__ = [
     "ErrorResponse",
     "NotFoundError",
     "RateLimitError",
+    "generate_secret",
+    "hash_secret",
 ]
