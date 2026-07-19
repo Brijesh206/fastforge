@@ -11,16 +11,21 @@ dist/
 build/
 .eggs/
 
-# Environment
+# Environment — ignore every .env variant except the tracked example.
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+*.bak
 
 # MCP config (contains API keys)
 .mcp.json
 
-# Local Claude Code tooling (skills, settings)
+# Local AI/editor tooling (skills, settings)
 .claude/
+.agents/
+.continue/
+.windsurf/
+skills-lock.json
 
 # IDE
 .idea/
@@ -51,6 +56,3 @@ docker-compose.override.yml
 
 # OS
 Thumbs.db
-
-# uv
-uv.lock

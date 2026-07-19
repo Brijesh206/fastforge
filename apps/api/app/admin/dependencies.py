@@ -13,12 +13,16 @@ from app.dependencies.database import get_db_transaction
 
 
 def require_admin(current_user: User = Depends(get_current_user)) -> User:
-    """Allow only users whose email is on the ADMIN_EMAILS allowlist.
+    """Allow only verified users whose email is on the ADMIN_EMAILS allowlist.
+
+    Verification is required so an attacker cannot gain admin by registering
+    an allowlisted address before its real owner does — only someone who can
+    read that inbox can become admin.
 
     Returns 403 for authenticated non-admins, 401 for unauthenticated callers
     (raised earlier by get_current_user).
     """
-    if not get_settings().is_admin(current_user.email):
+    if not current_user.is_verified or not get_settings().is_admin(current_user.email):
         raise AuthorizationError("Admin access required.")
     return current_user
 

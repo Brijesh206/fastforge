@@ -28,6 +28,7 @@ def _add_user(fake_users: FakeUserRepository, *, is_verified: bool = False) -> U
         is_verified=is_verified,
     )
     user.id = uuid4()
+    user.token_version = 0
     fake_users.users_by_email[user.email] = user
     fake_users.users_by_id[user.id] = user
     return user
@@ -179,3 +180,19 @@ async def test_delete_account_removes_the_user(
 async def test_delete_account_raises_for_unknown_user(auth_service: AuthService) -> None:
     with pytest.raises(UserNotFoundError):
         await auth_service.delete_account(uuid4())
+
+
+async def test_password_reset_revokes_outstanding_token_pairs(
+    auth_service: AuthService, fake_users: FakeUserRepository
+) -> None:
+    """Bumping token_version on reset must invalidate previously issued refresh tokens."""
+    user = _add_user(fake_users)
+    old_pair = auth_service._token_service.issue_token_pair(user.id, user.token_version)
+
+    result = await auth_service.issue_password_reset_token(user.email)
+    assert result is not None
+    await auth_service.reset_password(result[1], "a-new-strong-pass")
+
+    assert user.token_version == 1
+    with pytest.raises(InvalidTokenError):
+        await auth_service.refresh_tokens(old_pair.refresh_token)

@@ -83,6 +83,9 @@ class AuthService:
         """
         user = await self._user_repository.get_by_email(data.email)
         if user is None or user.password_hash is None:
+            # Burn the same time a real verify would take, so response timing
+            # doesn't reveal whether the email is registered.
+            self._password_hasher.hash(data.password)
             raise InvalidCredentialsError()
 
         if not self._password_hasher.verify(data.password, user.password_hash):
@@ -94,25 +97,28 @@ class AuthService:
         user.last_login_at = datetime.now(UTC)
         await self._user_repository.update(user)
 
-        return self._token_service.issue_token_pair(user.id)
+        return self._token_service.issue_token_pair(user.id, user.token_version)
 
     async def refresh_tokens(self, refresh_token: str) -> TokenPair:
         """Issue a new token pair from a valid refresh token.
 
-        Raises InvalidTokenError for an invalid or expired refresh token,
-        InvalidCredentialsError if the subject no longer exists, and
+        Raises InvalidTokenError for an invalid, expired, or revoked refresh
+        token, InvalidCredentialsError if the subject no longer exists, and
         InactiveUserError if the account has been deactivated.
         """
-        user_id = self._token_service.decode_refresh_token(refresh_token)
+        claims = self._token_service.decode_refresh_token(refresh_token)
 
-        user = await self._user_repository.get_by_id(user_id)
+        user = await self._user_repository.get_by_id(claims.user_id)
         if user is None:
             raise InvalidCredentialsError()
 
         if not user.is_active:
             raise InactiveUserError()
 
-        return self._token_service.issue_token_pair(user.id)
+        if claims.token_version != user.token_version:
+            raise InvalidTokenError()
+
+        return self._token_service.issue_token_pair(user.id, user.token_version)
 
     async def issue_email_verification_token(self, user: User) -> str:
         """Create a verification token for the user and return the raw value.
@@ -159,7 +165,11 @@ class AuthService:
         return user, raw_token
 
     async def reset_password(self, raw_token: str, new_password: str) -> User:
-        """Consume a reset token and set a new password.
+        """Consume a reset token, set a new password, and revoke all sessions.
+
+        Bumping token_version invalidates every outstanding access and refresh
+        token — an attacker holding tokens for a compromised account is locked
+        out the moment the owner resets the password.
 
         Raises InvalidTokenError if the token is unknown, already used, or
         expired.
@@ -170,6 +180,7 @@ class AuthService:
             raise InvalidTokenError()
 
         user.password_hash = self._password_hasher.hash(new_password)
+        user.token_version += 1
         return await self._user_repository.update(user)
 
     def verify_current_password(self, user: User, password: str) -> None:

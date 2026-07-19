@@ -40,12 +40,21 @@ async def request_validation_error_handler(
     _request: Request,
     exc: RequestValidationError,
 ) -> JSONResponse:
-    """Handle FastAPI request validation errors."""
+    """Handle FastAPI request validation errors.
+
+    Pydantic's raw errors include the submitted value (``input``) — echoing
+    that back would leak secrets (e.g. a too-short password) into responses
+    and logs, so only the field location and message are returned.
+    """
+    errors = [
+        {"loc": error.get("loc", ()), "msg": error.get("msg", ""), "type": error.get("type", "")}
+        for error in exc.errors()
+    ]
     response = ErrorResponse(
         error=ErrorDetail(
             code=ErrorCode.VALIDATION_ERROR,
             message="Request validation failed.",
-            details={"errors": exc.errors()},
+            details={"errors": errors},
         )
     )
     return JSONResponse(

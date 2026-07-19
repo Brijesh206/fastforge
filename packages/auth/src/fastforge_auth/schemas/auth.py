@@ -1,5 +1,7 @@
 """Login and token schemas."""
 
+from uuid import UUID
+
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
@@ -32,6 +34,16 @@ class RefreshRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     refresh_token: str = Field(..., min_length=1)
+
+
+class TokenClaims(BaseModel):
+    """Verified claims decoded from an access or refresh token."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    user_id: UUID
+    # Must match users.token_version; a mismatch means the token was revoked.
+    token_version: int = 0
 
 
 class TokenPair(BaseModel):

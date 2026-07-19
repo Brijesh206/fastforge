@@ -36,6 +36,14 @@ class DatabaseSettings(BaseSettings):
     pool_size: int = Field(default=5, ge=1, alias="DATABASE_POOL_SIZE")
     max_overflow: int = Field(default=10, ge=0, alias="DATABASE_MAX_OVERFLOW")
     pool_timeout: int = Field(default=30, ge=1, alias="DATABASE_POOL_TIMEOUT")
+    # pre_ping issues a `SELECT 1` on every connection checkout to detect dead
+    # connections. That is one extra network round-trip per request — cheap next
+    # to a local DB (~1ms), painful against a remote one (a US Supabase from
+    # India is ~330ms of pure tax per request). Keep it on for prod resilience;
+    # turn it off in dev when the DB is far away and an occasional reconnect is
+    # tolerable. See DATABASE_POOL_RECYCLE for the pre_ping-free safety net.
+    pool_pre_ping: bool = Field(default=True, alias="DATABASE_POOL_PRE_PING")
+    pool_recycle: int = Field(default=1800, ge=-1, alias="DATABASE_POOL_RECYCLE")
     echo: bool = Field(default=False, alias="DATABASE_ECHO")
     ssl_mode: DatabaseSslMode | None = Field(default=None, alias="DATABASE_SSL_MODE")
 

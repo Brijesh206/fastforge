@@ -35,11 +35,23 @@ from app.auth.dependencies import (
 from app.auth.emails import schedule_password_reset_email, schedule_verification_email
 from app.billing.dependencies import get_billing_service
 from app.config import get_settings
+from app.core.rate_limit import rate_limit
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+# Brute-force / abuse protection for the unauthenticated entry points.
+_login_limit = rate_limit("login", limit=10, window_seconds=60)
+_register_limit = rate_limit("register", limit=10, window_seconds=3600)
+_reset_limit = rate_limit("password_reset", limit=5, window_seconds=900)
+_resend_limit = rate_limit("resend_verification", limit=5, window_seconds=900)
 
-@router.post("/register", response_model=UserResponse, status_code=HTTPStatus.CREATED)
+
+@router.post(
+    "/register",
+    response_model=UserResponse,
+    status_code=HTTPStatus.CREATED,
+    dependencies=[Depends(_register_limit)],
+)
 async def register(
     payload: UserCreate,
     background_tasks: BackgroundTasks,
@@ -61,7 +73,7 @@ async def register(
     return UserResponse.model_validate(user)
 
 
-@router.post("/login", response_model=TokenPair)
+@router.post("/login", response_model=TokenPair, dependencies=[Depends(_login_limit)])
 async def login(
     payload: LoginRequest,
     service: AuthService = Depends(get_auth_service),
@@ -99,6 +111,7 @@ async def verify_email(
     "/verify-email/resend",
     response_model=MessageResponse,
     status_code=HTTPStatus.ACCEPTED,
+    dependencies=[Depends(_resend_limit)],
 )
 async def resend_verification(
     background_tasks: BackgroundTasks,
@@ -127,6 +140,7 @@ async def resend_verification(
     "/password-reset/request",
     response_model=MessageResponse,
     status_code=HTTPStatus.ACCEPTED,
+    dependencies=[Depends(_reset_limit)],
 )
 async def request_password_reset(
     payload: PasswordResetRequest,

@@ -46,10 +46,12 @@ export const tokenStore = {
   },
 };
 
-/** FastAPI puts errors in `detail`: a string, or a validation-error array. */
+/** The platform envelope is `{error: {code, message}}`; FastAPI's own errors
+ *  (e.g. from HTTPBearer) use `detail`: a string or validation-error array. */
 async function messageFrom(res: Response): Promise<string> {
   try {
     const data = await res.json();
+    if (typeof data?.error?.message === "string") return data.error.message;
     const detail = data?.detail;
     if (typeof detail === "string") return detail;
     if (Array.isArray(detail) && detail[0]?.msg) return detail[0].msg;

@@ -76,16 +76,24 @@ async def get_current_user(
         raise AuthenticationError("Missing bearer token.")
 
     token = credentials.credentials
+    required_version: int | None = None
     if token.startswith(API_KEY_PREFIX):
         # Only requests actually presenting an API key pay for the extra
         # transactional session this needs — the JWT path below does not.
         user_id = await authenticate_via_api_key(request, token)
     else:
-        user_id = token_service.decode_access_token(token)
+        claims = token_service.decode_access_token(token)
+        user_id = claims.user_id
+        required_version = claims.token_version
 
     user = await UserRepository(session).get_by_id(user_id)
     if user is None or not user.is_active:
         raise AuthenticationError("User is inactive or does not exist.")
+
+    # A bumped token_version (e.g. after a password reset) revokes every
+    # previously issued JWT. API keys are revoked via their own table.
+    if required_version is not None and required_version != user.token_version:
+        raise AuthenticationError("Token has been revoked.")
 
     return user
 

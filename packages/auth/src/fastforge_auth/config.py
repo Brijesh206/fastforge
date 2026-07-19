@@ -1,6 +1,8 @@
 """Authentication configuration."""
 
-from pydantic import Field, SecretStr
+from fastforge_common.config import PLACEHOLDER_SECRET_MARKERS
+from fastforge_common.enums import AppEnvironment
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from fastforge_auth.constants import (
@@ -22,6 +24,8 @@ class AuthSettings(BaseSettings):
         populate_by_name=True,
     )
 
+    # Read so the validator below can refuse placeholder JWT secrets in production.
+    app_env: AppEnvironment = Field(default=AppEnvironment.DEVELOPMENT, alias="APP_ENV")
     jwt_secret_key: SecretStr = Field(..., alias="JWT_SECRET_KEY", min_length=16)
     jwt_algorithm: str = Field(default=DEFAULT_JWT_ALGORITHM, alias="JWT_ALGORITHM")
     access_token_expire_minutes: int = Field(
@@ -44,3 +48,17 @@ class AuthSettings(BaseSettings):
         ge=1,
         alias="PASSWORD_RESET_TOKEN_EXPIRE_MINUTES",
     )
+
+    @model_validator(mode="after")
+    def _enforce_production_safety(self) -> "AuthSettings":
+        """Refuse to sign production tokens with a placeholder or weak secret."""
+        if self.app_env != AppEnvironment.PRODUCTION:
+            return self
+        secret = self.jwt_secret_key.get_secret_value().lower()
+        if len(secret) < 32 or any(marker in secret for marker in PLACEHOLDER_SECRET_MARKERS):
+            msg = (
+                "JWT_SECRET_KEY looks like a placeholder or is shorter than 32 chars; "
+                "set a strong random value in production (e.g. `openssl rand -hex 32`)."
+            )
+            raise ValueError(msg)
+        return self

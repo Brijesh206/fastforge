@@ -13,7 +13,7 @@ from fastforge_auth.interfaces.password_hasher import PasswordHasher
 from fastforge_auth.interfaces.token_service import TokenService
 from fastforge_auth.models.auth_token import AuthToken
 from fastforge_auth.models.user import User
-from fastforge_auth.schemas.auth import TokenPair
+from fastforge_auth.schemas.auth import TokenClaims, TokenPair
 from fastforge_auth.services.auth_service import AuthService
 
 
@@ -32,6 +32,9 @@ class FakeUserRepository:
 
     async def create(self, instance: User) -> User:
         instance.id = uuid4()
+        # Column defaults apply at flush time in the real repository.
+        if instance.token_version is None:
+            instance.token_version = 0
         self.users_by_email[instance.email] = instance
         self.users_by_id[instance.id] = instance
         return instance
@@ -91,14 +94,22 @@ class FakePasswordHasher(PasswordHasher):
 class FakeTokenService(TokenService):
     """Deterministic token service for tests."""
 
-    def issue_token_pair(self, user_id: UUID) -> TokenPair:
-        return TokenPair(access_token=f"access:{user_id}", refresh_token=f"refresh:{user_id}")
+    def issue_token_pair(self, user_id: UUID, token_version: int = 0) -> TokenPair:
+        return TokenPair(
+            access_token=f"access:{user_id}:{token_version}",
+            refresh_token=f"refresh:{user_id}:{token_version}",
+        )
 
-    def decode_access_token(self, token: str) -> UUID:
-        return UUID(token.removeprefix("access:"))
+    def decode_access_token(self, token: str) -> TokenClaims:
+        return self._claims(token.removeprefix("access:"))
 
-    def decode_refresh_token(self, token: str) -> UUID:
-        return UUID(token.removeprefix("refresh:"))
+    def decode_refresh_token(self, token: str) -> TokenClaims:
+        return self._claims(token.removeprefix("refresh:"))
+
+    @staticmethod
+    def _claims(raw: str) -> TokenClaims:
+        user_id, _, version = raw.partition(":")
+        return TokenClaims(user_id=UUID(user_id), token_version=int(version or 0))
 
 
 @pytest.fixture

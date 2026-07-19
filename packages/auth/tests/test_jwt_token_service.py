@@ -19,9 +19,11 @@ def test_issue_token_pair_round_trips_through_access_token() -> None:
     service = _service()
     user_id = uuid4()
 
-    tokens = service.issue_token_pair(user_id)
+    tokens = service.issue_token_pair(user_id, 3)
 
-    assert service.decode_access_token(tokens.access_token) == user_id
+    claims = service.decode_access_token(tokens.access_token)
+    assert claims.user_id == user_id
+    assert claims.token_version == 3
 
 
 def test_issue_token_pair_round_trips_through_refresh_token() -> None:
@@ -30,7 +32,10 @@ def test_issue_token_pair_round_trips_through_refresh_token() -> None:
 
     tokens = service.issue_token_pair(user_id)
 
-    assert service.decode_refresh_token(tokens.refresh_token) == user_id
+    claims = service.decode_refresh_token(tokens.refresh_token)
+    assert claims.user_id == user_id
+    # A token issued before token_version existed decodes as version 0.
+    assert claims.token_version == 0
 
 
 def test_decode_access_token_rejects_refresh_token() -> None:

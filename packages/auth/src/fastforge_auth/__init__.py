@@ -21,6 +21,7 @@ from fastforge_auth.schemas.auth import (
     AccountDeleteRequest,
     LoginRequest,
     RefreshRequest,
+    TokenClaims,
     TokenPair,
 )
 from fastforge_auth.schemas.user import UserCreate, UserResponse
@@ -51,6 +52,7 @@ __all__ = [
     "PasswordResetConfirm",
     "PasswordResetRequest",
     "RefreshRequest",
+    "TokenClaims",
     "TokenPair",
     "TokenService",
     "TokenType",
