@@ -446,6 +446,8 @@ based on Pydantic Settings.
 
 # Security Rules
 
+**Full standards: docs/18-security.md — binding for every PR.**
+
 Never:
 
 - log passwords
@@ -459,6 +461,14 @@ Always hash:
 - API keys
 
 Never store plaintext secrets.
+
+Additionally:
+
+- New unauthenticated endpoints get a `rate_limit(...)` dependency.
+- Session-ending events bump `user.token_version` (never invent a parallel revocation mechanism).
+- Request schemas use `extra="forbid"`; responses use explicit schemas.
+- Never weaken a validator, TTL, length limit, or production startup guard to make something pass.
+- Admin access requires the allowlist **and** a verified email.
 
 ---
 

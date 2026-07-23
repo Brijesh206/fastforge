@@ -2,11 +2,17 @@
 name = "fastforge-api-keys"
 version = "0.1.0"
 requires-python = ">=3.13"
-dependencies = ["fastforge-database", "fastforge-common"]
+dependencies = [
+    "fastforge-database",
+    "fastforge-common",
+    "fastforge-cache",
+    "pydantic-settings>=2.7.0",
+]
 
 [tool.uv.sources]
 fastforge-database = { workspace = true }
 fastforge-common = { workspace = true }
+fastforge-cache = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

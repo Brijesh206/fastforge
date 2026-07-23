@@ -1,5 +1,9 @@
 import { API_URL } from "@/lib/config";
 import type {
+  AdminStats,
+  AdminUserDetail,
+  AdminUserItem,
+  AdminUserList,
   CheckoutSession,
   MessageResponse,
   PortalSession,
@@ -42,10 +46,12 @@ export const tokenStore = {
   },
 };
 
-/** FastAPI puts errors in `detail`: a string, or a validation-error array. */
+/** The platform envelope is `{error: {code, message}}`; FastAPI's own errors
+ *  (e.g. from HTTPBearer) use `detail`: a string or validation-error array. */
 async function messageFrom(res: Response): Promise<string> {
   try {
     const data = await res.json();
+    if (typeof data?.error?.message === "string") return data.error.message;
     const detail = data?.detail;
     if (typeof detail === "string") return detail;
     if (Array.isArray(detail) && detail[0]?.msg) return detail[0].msg;
@@ -156,4 +162,22 @@ export const api = {
 
   openPortal: () =>
     request<PortalSession>("/billing/portal", { method: "POST", auth: true }),
+
+  admin: {
+    stats: () => request<AdminStats>("/admin/stats", { auth: true }),
+
+    users: ({ page = 1, pageSize = 20, q = "" }: { page?: number; pageSize?: number; q?: string }) => {
+      const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+      if (q) params.set("q", q);
+      return request<AdminUserList>(`/admin/users?${params.toString()}`, { auth: true });
+    },
+
+    user: (id: string) => request<AdminUserDetail>(`/admin/users/${id}`, { auth: true }),
+
+    activate: (id: string) =>
+      request<AdminUserItem>(`/admin/users/${id}/activate`, { method: "POST", auth: true }),
+
+    deactivate: (id: string) =>
+      request<AdminUserItem>(`/admin/users/${id}/deactivate`, { method: "POST", auth: true }),
+  },
 };

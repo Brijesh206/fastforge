@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from fastforge_auth.schemas.auth import TokenPair
+from fastforge_auth.schemas.auth import TokenClaims, TokenPair
 
 
 class TokenService(ABC):
@@ -15,13 +15,13 @@ class TokenService(ABC):
     """
 
     @abstractmethod
-    def issue_token_pair(self, user_id: UUID) -> TokenPair:
+    def issue_token_pair(self, user_id: UUID, token_version: int = 0) -> TokenPair:
         """Issue a new access/refresh token pair for a user."""
 
     @abstractmethod
-    def decode_access_token(self, token: str) -> UUID:
-        """Decode an access token and return the subject user id."""
+    def decode_access_token(self, token: str) -> TokenClaims:
+        """Decode an access token and return its verified claims."""
 
     @abstractmethod
-    def decode_refresh_token(self, token: str) -> UUID:
-        """Decode a refresh token and return the subject user id."""
+    def decode_refresh_token(self, token: str) -> TokenClaims:
+        """Decode a refresh token and return its verified claims."""

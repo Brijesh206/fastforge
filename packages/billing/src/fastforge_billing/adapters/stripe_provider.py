@@ -68,6 +68,10 @@ class StripeBillingProvider(BillingProvider):
         )
         return session.url
 
+    async def cancel_subscription(self, *, subscription_id: str) -> None:
+        client = self._client()
+        await asyncio.to_thread(client.v1.subscriptions.cancel, subscription_id)
+
     def parse_webhook(self, *, payload: bytes, signature: str) -> BillingEvent:
         secret = self._settings.webhook_secret.get_secret_value()
         if not secret:
@@ -83,10 +87,12 @@ class StripeBillingProvider(BillingProvider):
         # navigating Stripe's object wrappers.
         event = json.loads(payload)
         event_type: str = event["type"]
+        created_at = datetime.fromtimestamp(event["created"], UTC)
         if not event_type.startswith(_SUBSCRIPTION_EVENT_PREFIX):
-            return BillingEvent(type=event_type)
+            return BillingEvent(type=event_type, created_at=created_at)
         return BillingEvent(
             type=event_type,
+            created_at=created_at,
             subscription=_subscription_from(event["data"]["object"]),
         )
 

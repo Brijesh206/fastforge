@@ -2,10 +2,13 @@
 
 from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastforge_api_keys import API_KEY_PREFIX
 from fastforge_auth import (
     AuthService,
     AuthSettings,
     AuthTokenRepository,
+    OAuthProvider,
+    OAuthSettings,
     PasswordHasher,
     TokenService,
     User,
@@ -15,6 +18,7 @@ from fastforge_common.exceptions import AuthenticationError
 from fastforge_mail import EmailService
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api_keys.dependencies import authenticate_via_api_key
 from app.dependencies.database import get_db_session, get_db_transaction
 
 _bearer_scheme = HTTPBearer(auto_error=False)
@@ -40,6 +44,21 @@ def get_email_service(request: Request) -> EmailService:
     return request.app.state.email_service
 
 
+def get_oauth_settings(request: Request) -> OAuthSettings:
+    """Return the OAuth settings resolved during startup."""
+    return request.app.state.oauth_settings
+
+
+def get_google_oauth_provider(request: Request) -> OAuthProvider:
+    """Return the process-wide Google OAuth provider created during startup."""
+    return request.app.state.google_oauth_provider
+
+
+def get_github_oauth_provider(request: Request) -> OAuthProvider:
+    """Return the process-wide GitHub OAuth provider created during startup."""
+    return request.app.state.github_oauth_provider
+
+
 def get_auth_service(
     session: AsyncSession = Depends(get_db_transaction),
     password_hasher: PasswordHasher = Depends(get_password_hasher),
@@ -58,23 +77,40 @@ def get_auth_service(
 
 
 async def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
     session: AsyncSession = Depends(get_db_session),
     token_service: TokenService = Depends(get_token_service),
 ) -> User:
-    """Resolve the authenticated user from a Bearer access token.
+    """Resolve the authenticated user from a Bearer token — a JWT access
+    token or an API key (``ffk_...``), either is accepted in the same header.
 
-    Raises AuthenticationError when the token is missing, invalid, or the
-    resolved user is missing or inactive.
+    Raises AuthenticationError when the token is missing or invalid,
+    RateLimitError if an API key has exceeded its rate limit, and
+    AuthenticationError if the resolved user is missing or inactive.
     """
     if credentials is None or not credentials.credentials:
         raise AuthenticationError("Missing bearer token.")
 
-    user_id = token_service.decode_access_token(credentials.credentials)
+    token = credentials.credentials
+    required_version: int | None = None
+    if token.startswith(API_KEY_PREFIX):
+        # Only requests actually presenting an API key pay for the extra
+        # transactional session this needs — the JWT path below does not.
+        user_id = await authenticate_via_api_key(request, token)
+    else:
+        claims = token_service.decode_access_token(token)
+        user_id = claims.user_id
+        required_version = claims.token_version
 
     user = await UserRepository(session).get_by_id(user_id)
     if user is None or not user.is_active:
         raise AuthenticationError("User is inactive or does not exist.")
+
+    # A bumped token_version (e.g. after a password reset) revokes every
+    # previously issued JWT. API keys are revoked via their own table.
+    if required_version is not None and required_version != user.token_version:
+        raise AuthenticationError("Token has been revoked.")
 
     return user
 

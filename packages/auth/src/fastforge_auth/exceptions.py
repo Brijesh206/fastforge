@@ -5,7 +5,9 @@ These extend the shared application exception hierarchy from
 handling logic.
 """
 
-from fastforge_common.exceptions import AuthenticationError, ConflictError, NotFoundError
+from http import HTTPStatus
+
+from fastforge_common.exceptions import AppError, AuthenticationError, ConflictError, NotFoundError
 
 
 class UserAlreadyExistsError(ConflictError):
@@ -36,3 +38,23 @@ class InvalidTokenError(AuthenticationError):
     """Raised when a token is invalid, expired, or malformed."""
 
     message = "Invalid or expired token."
+
+
+class OAuthError(AppError):
+    """Base for OAuth sign-in failures."""
+
+    message = "OAuth sign-in failed."
+
+
+class OAuthNotConfiguredError(OAuthError):
+    """Raised when a provider's client id/secret is missing."""
+
+    status_code = HTTPStatus.SERVICE_UNAVAILABLE
+    message = "This sign-in provider is not configured."
+
+
+class OAuthEmailNotVerifiedError(OAuthError):
+    """Raised when the provider can't vouch that the account's email is verified."""
+
+    status_code = HTTPStatus.BAD_REQUEST
+    message = "Your email address is not verified with this provider."

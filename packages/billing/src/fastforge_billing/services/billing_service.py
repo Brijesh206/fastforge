@@ -65,12 +65,31 @@ class BillingService:
             customer_id=subscription.stripe_customer_id, return_url=return_url
         )
 
+    async def cancel_active_subscription(self, user_id: UUID) -> None:
+        """Cancel the user's Stripe subscription immediately, if one is active.
+
+        No-op if the user has no subscription or it isn't active. Used by
+        account deletion so a removed account doesn't keep being billed —
+        the local row is left for the webhook (or the caller) to clean up.
+        """
+        subscription = await self._subscriptions.get_by_user_id(user_id)
+        if subscription is None or subscription.stripe_subscription_id is None:
+            return
+        if subscription.status not in ACTIVE_STATUSES:
+            return
+        await self._provider.cancel_subscription(
+            subscription_id=subscription.stripe_subscription_id
+        )
+
     async def handle_event(self, event: BillingEvent) -> None:
         """Apply a verified webhook event to local subscription state.
 
         Idempotent: syncing the same event twice yields the same row. Events
         the platform does not act on (``event.subscription is None``) are
-        ignored.
+        ignored. Events older than the last-applied one are also ignored —
+        Stripe retries and redeliveries are not guaranteed to arrive in
+        order, and applying a stale event after a newer one would clobber
+        fresher state with old data.
         """
         if event.subscription is None:
             return
@@ -85,6 +104,18 @@ class BillingService:
             )
             return
 
+        last_event_at = subscription.last_event_at
+        if last_event_at is not None and event.created_at <= last_event_at:
+            logger.warning(
+                "Out-of-order webhook event; ignoring",
+                stripe_customer_id=data.customer_id,
+                event_type=event.type,
+                event_created_at=event.created_at.isoformat(),
+                last_event_at=last_event_at.isoformat(),
+            )
+            return
+
+        subscription.last_event_at = event.created_at
         subscription.stripe_subscription_id = data.subscription_id
         subscription.status = data.status
         subscription.price_id = data.price_id

@@ -24,7 +24,8 @@ class DatabaseManager:
             pool_size=settings.pool_size,
             max_overflow=settings.max_overflow,
             pool_timeout=settings.pool_timeout,
-            pool_pre_ping=True,
+            pool_pre_ping=settings.pool_pre_ping,
+            pool_recycle=settings.pool_recycle,
             connect_args=settings.connect_args,
         )
         self._session_factory: async_sessionmaker[AsyncSession] = async_sessionmaker(

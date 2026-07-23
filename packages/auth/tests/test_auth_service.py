@@ -54,13 +54,14 @@ async def test_authenticate_user_returns_token_pair_for_valid_credentials(
 ) -> None:
     existing = User(email="user@example.com", password_hash="hashed:a-strong-pass", is_active=True)
     existing.id = uuid4()
+    existing.token_version = 0
     fake_users.users_by_email["user@example.com"] = existing
 
     tokens = await auth_service.authenticate_user(
         LoginRequest(email="user@example.com", password="a-strong-pass")
     )
 
-    assert tokens.access_token == f"access:{existing.id}"
+    assert tokens.access_token == f"access:{existing.id}:0"
 
 
 async def test_authenticate_user_raises_for_unknown_email(auth_service: AuthService) -> None:
@@ -75,6 +76,7 @@ async def test_authenticate_user_raises_for_wrong_password(
 ) -> None:
     existing = User(email="user@example.com", password_hash="hashed:a-strong-pass", is_active=True)
     existing.id = uuid4()
+    existing.token_version = 0
     fake_users.users_by_email["user@example.com"] = existing
 
     with pytest.raises(InvalidCredentialsError):
@@ -99,6 +101,7 @@ async def test_authenticate_user_raises_for_inactive_user(
 def _add_user(fake_users: FakeUserRepository, *, is_active: bool = True) -> User:
     user = User(email="user@example.com", password_hash="hashed:a-strong-pass", is_active=is_active)
     user.id = uuid4()
+    user.token_version = 0
     fake_users.users_by_email[user.email] = user
     fake_users.users_by_id[user.id] = user
     return user
@@ -111,8 +114,8 @@ async def test_refresh_tokens_returns_new_pair_for_valid_token(
 
     pair = await auth_service.refresh_tokens(f"refresh:{user.id}")
 
-    assert pair.access_token == f"access:{user.id}"
-    assert pair.refresh_token == f"refresh:{user.id}"
+    assert pair.access_token == f"access:{user.id}:0"
+    assert pair.refresh_token == f"refresh:{user.id}:0"
 
 
 async def test_refresh_tokens_raises_when_user_missing(auth_service: AuthService) -> None:

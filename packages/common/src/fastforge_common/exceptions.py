@@ -97,8 +97,23 @@ class ConflictError(AppError):
 
 
 class RateLimitError(AppError):
-    """Raised when a caller exceeds a rate limit."""
+    """Raised when a caller exceeds a rate limit.
+
+    ``retry_after_seconds``, when set, is surfaced as a ``Retry-After`` HTTP
+    header by the platform's exception handler — callers should not need to
+    guess how long to back off.
+    """
 
     code = ErrorCode.RATE_LIMITED
     status_code = HTTPStatus.TOO_MANY_REQUESTS
     message = "Too many requests."
+
+    def __init__(
+        self,
+        message: str | None = None,
+        *,
+        retry_after_seconds: int | None = None,
+        details: dict[str, object] | None = None,
+    ) -> None:
+        super().__init__(message, details=details)
+        self.retry_after_seconds = retry_after_seconds
