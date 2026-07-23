@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError, api } from "@/lib/api";
+import { OAuthButtons } from "@/components/oauth-buttons";
 import { useSession } from "@/providers/session-provider";
 
 export default function SignupPage() {
@@ -57,9 +58,19 @@ export default function SignupPage() {
         <CardDescription>Start your free account in seconds.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        <div className="space-y-4">
           {error && <Alert variant="error">{error}</Alert>}
 
+          <OAuthButtons />
+
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="h-px flex-1 bg-border" />
+            or sign up with email
+            <span className="h-px flex-1 bg-border" />
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="mt-4 space-y-4" noValidate>
           <div>
             <Label htmlFor="full_name">Full name</Label>
             <Input

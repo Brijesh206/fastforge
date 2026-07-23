@@ -1,16 +1,21 @@
 """Authentication foundation for FastForge."""
 
 from fastforge_auth.adapters.argon2_password_hasher import Argon2PasswordHasher
+from fastforge_auth.adapters.github_oauth_provider import GitHubOAuthProvider
+from fastforge_auth.adapters.google_oauth_provider import GoogleOAuthProvider
 from fastforge_auth.adapters.jwt_token_service import JwtTokenService
-from fastforge_auth.config import AuthSettings
+from fastforge_auth.config import AuthSettings, OAuthSettings
 from fastforge_auth.enums import AuthProvider, AuthTokenPurpose, TokenType
 from fastforge_auth.exceptions import (
     InactiveUserError,
     InvalidCredentialsError,
     InvalidTokenError,
+    OAuthEmailNotVerifiedError,
+    OAuthNotConfiguredError,
     UserAlreadyExistsError,
     UserNotFoundError,
 )
+from fastforge_auth.interfaces.oauth_provider import OAuthProvider, OAuthUserInfo
 from fastforge_auth.interfaces.password_hasher import PasswordHasher
 from fastforge_auth.interfaces.token_service import TokenService
 from fastforge_auth.models.auth_token import AuthToken
@@ -42,12 +47,19 @@ __all__ = [
     "AuthToken",
     "AuthTokenPurpose",
     "AuthTokenRepository",
+    "GitHubOAuthProvider",
+    "GoogleOAuthProvider",
     "InactiveUserError",
     "InvalidCredentialsError",
     "InvalidTokenError",
     "JwtTokenService",
     "LoginRequest",
     "MessageResponse",
+    "OAuthEmailNotVerifiedError",
+    "OAuthNotConfiguredError",
+    "OAuthProvider",
+    "OAuthSettings",
+    "OAuthUserInfo",
     "PasswordHasher",
     "PasswordResetConfirm",
     "PasswordResetRequest",

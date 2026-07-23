@@ -7,6 +7,8 @@ from fastforge_auth import (
     AuthService,
     AuthSettings,
     AuthTokenRepository,
+    OAuthProvider,
+    OAuthSettings,
     PasswordHasher,
     TokenService,
     User,
@@ -40,6 +42,21 @@ def get_auth_settings(request: Request) -> AuthSettings:
 def get_email_service(request: Request) -> EmailService:
     """Return the process-wide email service created during startup."""
     return request.app.state.email_service
+
+
+def get_oauth_settings(request: Request) -> OAuthSettings:
+    """Return the OAuth settings resolved during startup."""
+    return request.app.state.oauth_settings
+
+
+def get_google_oauth_provider(request: Request) -> OAuthProvider:
+    """Return the process-wide Google OAuth provider created during startup."""
+    return request.app.state.google_oauth_provider
+
+
+def get_github_oauth_provider(request: Request) -> OAuthProvider:
+    """Return the process-wide GitHub OAuth provider created during startup."""
+    return request.app.state.github_oauth_provider
 
 
 def get_auth_service(

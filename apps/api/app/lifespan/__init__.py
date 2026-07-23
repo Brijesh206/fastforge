@@ -5,7 +5,14 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastforge_api_keys import ApiKeySettings
-from fastforge_auth import Argon2PasswordHasher, AuthSettings, JwtTokenService
+from fastforge_auth import (
+    Argon2PasswordHasher,
+    AuthSettings,
+    GitHubOAuthProvider,
+    GoogleOAuthProvider,
+    JwtTokenService,
+    OAuthSettings,
+)
 from fastforge_billing import BillingSettings, StripeBillingProvider
 from fastforge_cache import CacheSettings, create_cache
 from fastforge_database import DatabaseManager, DatabaseSettings
@@ -20,6 +27,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """Initialize and dispose application infrastructure."""
     configure_logging(LoggingSettings(service_name="api"))
     auth_settings = AuthSettings()
+    oauth_settings = OAuthSettings()
     mail_settings = MailSettings()
     billing_settings = BillingSettings()
     cache_settings = CacheSettings()
@@ -28,6 +36,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     app.state.password_hasher = Argon2PasswordHasher()
     app.state.token_service = JwtTokenService(auth_settings)
     app.state.auth_settings = auth_settings
+    app.state.oauth_settings = oauth_settings
+    app.state.google_oauth_provider = GoogleOAuthProvider(oauth_settings)
+    app.state.github_oauth_provider = GitHubOAuthProvider(oauth_settings)
     app.state.email_service = EmailService(create_email_provider(mail_settings), mail_settings)
     app.state.billing_settings = billing_settings
     app.state.billing_provider = StripeBillingProvider(billing_settings)

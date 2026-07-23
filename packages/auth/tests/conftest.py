@@ -35,6 +35,8 @@ class FakeUserRepository:
         # Column defaults apply at flush time in the real repository.
         if instance.token_version is None:
             instance.token_version = 0
+        if instance.is_active is None:
+            instance.is_active = True
         self.users_by_email[instance.email] = instance
         self.users_by_id[instance.id] = instance
         return instance

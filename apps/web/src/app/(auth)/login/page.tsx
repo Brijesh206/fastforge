@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -16,11 +16,20 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api";
+import { OAuthButtons } from "@/components/oauth-buttons";
 import { useSession } from "@/providers/session-provider";
 
-export default function LoginPage() {
+const OAUTH_ERROR_MESSAGES: Record<string, string> = {
+  oauth_failed: "Something went wrong signing you in. Please try again.",
+  oauth_email_unverified:
+    "That provider couldn't confirm your email is verified. Try a different sign-in method.",
+  oauth_account_inactive: "This account has been deactivated.",
+};
+
+function LoginInner() {
   const router = useRouter();
   const { signIn } = useSession();
+  const oauthError = useSearchParams().get("error");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -52,9 +61,23 @@ export default function LoginPage() {
         <CardDescription>Log in to your account to continue.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-          {error && <Alert variant="error">{error}</Alert>}
+        <div className="space-y-4">
+          {(error ?? (oauthError && OAUTH_ERROR_MESSAGES[oauthError])) && (
+            <Alert variant="error">
+              {error ?? OAUTH_ERROR_MESSAGES[oauthError!]}
+            </Alert>
+          )}
 
+          <OAuthButtons />
+
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="h-px flex-1 bg-border" />
+            or continue with email
+            <span className="h-px flex-1 bg-border" />
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="mt-4 space-y-4" noValidate>
           <div>
             <Label htmlFor="email">Email</Label>
             <Input
@@ -100,5 +123,13 @@ export default function LoginPage() {
         </p>
       </CardContent>
     </Card>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginInner />
+    </Suspense>
   );
 }

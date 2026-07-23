@@ -15,6 +15,7 @@ from fastforge_auth.exceptions import (
     UserAlreadyExistsError,
     UserNotFoundError,
 )
+from fastforge_auth.interfaces.oauth_provider import OAuthUserInfo
 from fastforge_auth.interfaces.password_hasher import PasswordHasher
 from fastforge_auth.interfaces.token_service import TokenService
 from fastforge_auth.models.auth_token import AuthToken
@@ -90,6 +91,39 @@ class AuthService:
 
         if not self._password_hasher.verify(data.password, user.password_hash):
             raise InvalidCredentialsError()
+
+        if not user.is_active:
+            raise InactiveUserError()
+
+        user.last_login_at = datetime.now(UTC)
+        await self._user_repository.update(user)
+
+        return self._token_service.issue_token_pair(user.id, user.token_version)
+
+    async def login_or_register_oauth_user(self, info: OAuthUserInfo) -> TokenPair:
+        """Log in via a verified OAuth identity, registering on first sign-in.
+
+        Links by email rather than a separate provider-account table: the
+        provider has already verified ``info.email``, so an existing
+        password-based account with that address is simply signed into (and
+        marked verified, if it wasn't already) — matching docs/08's "link
+        accounts by verified email" rule.
+
+        Raises InactiveUserError if the matched account has been deactivated.
+        """
+        user = await self._user_repository.get_by_email(info.email)
+        if user is None:
+            user = await self._user_repository.create(
+                User(
+                    email=info.email,
+                    full_name=info.full_name,
+                    avatar_url=info.avatar_url,
+                    is_verified=True,
+                )
+            )
+        elif not user.is_verified:
+            user.is_verified = True
+            user = await self._user_repository.update(user)
 
         if not user.is_active:
             raise InactiveUserError()

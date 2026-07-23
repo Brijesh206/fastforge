@@ -62,3 +62,23 @@ class AuthSettings(BaseSettings):
             )
             raise ValueError(msg)
         return self
+
+
+class OAuthSettings(BaseSettings):
+    """Google & GitHub OAuth app credentials.
+
+    All default to empty so the API boots without OAuth configured; each
+    adapter raises OAuthNotConfiguredError if used without its credentials.
+    """
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        populate_by_name=True,
+    )
+
+    google_client_id: str = Field(default="", alias="GOOGLE_CLIENT_ID")
+    google_client_secret: SecretStr = Field(default=SecretStr(""), alias="GOOGLE_CLIENT_SECRET")
+    github_client_id: str = Field(default="", alias="GITHUB_CLIENT_ID")
+    github_client_secret: SecretStr = Field(default=SecretStr(""), alias="GITHUB_CLIENT_SECRET")
