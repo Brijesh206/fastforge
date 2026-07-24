@@ -62,7 +62,7 @@ addopts = "--import-mode=importlib"
 consider_namespace_packages = true
 testpaths = ["packages", "apps"]
 markers = [
-    "integration: marks tests requiring a running PostgreSQL database",
+    "integration: marks tests requiring live services (PostgreSQL, Redis)",
 ]
 
 [tool.mypy]

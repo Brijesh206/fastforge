@@ -171,15 +171,21 @@ def _selftest() -> None:
     assert "STRIPE_SECRET_KEY=\n" in out  # blanked
     assert "velorex_platform" in out and "fastforge_platform" not in out
 
-    router = "from app.billing.router import router as billing_router\napi_router.include_router(billing_router)\napi_router.include_router(auth_router)\n"
+    router = (
+        "from app.billing.router import router as billing_router\n"
+        "api_router.include_router(billing_router)\n"
+        "api_router.include_router(auth_router)\n"
+    )
     out = comment_out(router, MODULES["billing"]["router_lines"])
     assert sum(ln.lstrip().startswith("#") for ln in out.splitlines()) == 2  # both billing lines
-    assert "include_router(auth_router)" in out and "# api_router.include_router(auth_router)" not in out
+    assert "include_router(auth_router)" in out
+    assert "# api_router.include_router(auth_router)" not in out
     # idempotent: re-running doesn't double-comment
     assert comment_out(out, MODULES["billing"]["router_lines"]) == out
 
     assert apply_root_pkg('"name": "fastforge"', "Velorex", "velorex") == '"name": "velorex"'
-    assert apply_web_pkg('"@fastforge/web" for FastForge', "Velorex") == '"@fastforge/web" for Velorex'
+    web_pkg = '"@fastforge/web" for FastForge'
+    assert apply_web_pkg(web_pkg, "Velorex") == '"@fastforge/web" for Velorex'
     print("selftest ok")
 
 
