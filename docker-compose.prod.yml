@@ -1,0 +1,63 @@
+# Production stack for a single VPS (~1 vCPU / 1GB is enough — the web app runs
+# on Vercel and Postgres is Supabase, so only the API + Caddy live here).
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Requires a .env alongside this file (see .env.production.example) and DNS
+# A-record for $API_DOMAIN pointing at this host.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    image: fastforge-api:latest
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      redis:
+        condition: service_healthy
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/v1/health').status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  # Rate limiting, token revocation and API-key limits all read through the
+  # cache. Without this the API silently falls back to in-memory, which means
+  # one counter per worker and a reset on every restart.
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Deliberately no host port, unlike the dev compose: on a public VPS that
+    # would publish an unauthenticated Redis to the internet. Only the api
+    # container reaches it, over the compose network.
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
+  redis_data:
