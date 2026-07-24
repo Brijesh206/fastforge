@@ -15,11 +15,19 @@ Reference topology (cheap and enough for launch):
 ```text
 Web (Next.js)  →  Vercel        (free; builds there, off your server)
 API (FastAPI)  →  1 small VPS   (Docker Compose + Caddy for auto-HTTPS)
+Cache (Redis)  →  same VPS      (container; not exposed to the internet)
 Database       →  Supabase      (managed Postgres, external)
 ```
 
 A 1 vCPU / 1 GB VPS is enough, because the web app builds on Vercel and the
-database is Supabase — only the API + Caddy run on the box (~300–400 MB).
+database is Supabase — only the API, Redis and Caddy run on the box
+(~350–450 MB).
+
+Redis is not optional here. The API runs multiple uvicorn workers
+(`WEB_CONCURRENCY`, default 2), and rate limiting, JWT revocation and
+per-API-key limits all read through the cache. On the in-memory fallback each
+worker keeps its own counters and loses them on restart, so the limits are
+weaker than they look while still reporting healthy.
 
 ## API on a VPS (Docker Compose)
 
@@ -33,8 +41,13 @@ git clone <your-repo> fastforge && cd fastforge
 # 2. Configure secrets
 cp .env.production.example .env
 #    edit .env — set API_DOMAIN, APP_SECRET_KEY, JWT_SECRET_KEY,
-#    DATABASE_URL (Supabase pooler), Stripe keys, mail creds, FRONTEND_BASE_URL
+#    DATABASE_URL (Supabase pooler), Stripe keys, mail creds, FRONTEND_BASE_URL,
+#    ADMIN_EMAILS, and OAuth client IDs/secrets if you want social sign-in
 #    generate secrets with:  openssl rand -hex 32
+#
+#    APP_SECRET_KEY under 32 chars, or anything that looks like a placeholder,
+#    makes the API refuse to boot when APP_ENV=production. That guard is
+#    deliberate — it fails loudly at start rather than quietly in the open.
 
 # 3. (1 GB box) add swap headroom so builds don't OOM
 sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile \
@@ -51,6 +64,14 @@ curl https://api.yourdomain.com/api/v1/health   # -> {"status":"ok"}
 Migrations run automatically on every deploy (the container's entrypoint runs
 `alembic upgrade head` before serving — see `docker/api/entrypoint.sh`). To
 ship an update: `git pull && docker compose -f docker-compose.prod.yml up -d --build`.
+
+> **The first deploy migrates your live database.** The entrypoint applies
+> every pending revision against whatever `DATABASE_URL` points at, before it
+> serves a single request. Take a Supabase snapshot before the first
+> `up -d --build` against a database you care about. If migrations fail the
+> container exits rather than serving on a stale schema, which is the right
+> behaviour but does mean a bad revision takes the API down instead of
+> degrading it.
 
 ## Web on Vercel
 
