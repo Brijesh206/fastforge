@@ -4,6 +4,8 @@ import type {
   AdminUserDetail,
   AdminUserItem,
   AdminUserList,
+  ApiKey,
+  ApiKeyCreated,
   CheckoutSession,
   MessageResponse,
   PortalSession,
@@ -130,6 +132,41 @@ export const api = {
   logout: () => tokenStore.clear(),
 
   me: () => request<User>("/auth/me", { auth: true }),
+
+  updateProfile: (payload: { full_name: string | null }) =>
+    request<User>("/auth/me", { method: "PATCH", body: payload, auth: true }),
+
+  /** Changing the password revokes every outstanding token, so the fresh pair
+   *  the API returns must replace the stored one or this tab logs itself out. */
+  changePassword: async (payload: {
+    current_password?: string;
+    new_password: string;
+  }) => {
+    const pair = await request<TokenPair>("/auth/password", {
+      method: "POST",
+      body: payload,
+      auth: true,
+    });
+    tokenStore.save(pair);
+    return pair;
+  },
+
+  deleteAccount: (password?: string) =>
+    request<void>("/auth/me", {
+      method: "DELETE",
+      body: { password: password ?? null },
+      auth: true,
+    }),
+
+  apiKeys: {
+    list: () => request<ApiKey[]>("/api-keys", { auth: true }),
+
+    create: (name: string) =>
+      request<ApiKeyCreated>("/api-keys", { method: "POST", body: { name }, auth: true }),
+
+    revoke: (id: string) =>
+      request<void>(`/api-keys/${id}`, { method: "DELETE", auth: true }),
+  },
 
   verifyEmail: (token: string) =>
     request<MessageResponse>("/auth/verify-email", {

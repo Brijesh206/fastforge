@@ -21,11 +21,15 @@ class LoginRequest(BaseModel):
 
 
 class AccountDeleteRequest(BaseModel):
-    """Payload confirming a user's password before deleting their own account."""
+    """Payload confirming ownership before a user deletes their own account.
+
+    Optional because an OAuth-only account has no password to confirm; when
+    one IS set, AuthService.verify_current_password rejects a missing value.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
-    password: str = Field(..., min_length=1)
+    password: str | None = Field(default=None, min_length=1)
 
 
 class RefreshRequest(BaseModel):

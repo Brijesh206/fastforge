@@ -1,1 +1,2 @@
-# TODO: Static assets.
+# Static assets served from / (favicon, images, robots.txt).
+# Tracked even while empty because docker/web/Dockerfile COPYs this directory.

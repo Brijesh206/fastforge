@@ -69,8 +69,8 @@ pnpm --filter @fastforge/web dev
 ```
 
 Log in at http://localhost:3000/login with an email in `ADMIN_EMAILS`, open
-`/admin` to confirm the platform is alive. See `LOCAL_DEV.md` for the full
-local-dev runbook. Now auth, billing, API keys, mail, cache, and the admin panel
+`/admin` to confirm the platform is alive. See the root `README.md` for the full
+setup runbook. Now auth, billing, API keys, mail, cache, and the admin panel
 are already running — you only build your product's business logic.
 
 ## 4. Build your product's business logic

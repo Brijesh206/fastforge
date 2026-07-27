@@ -1,3 +1,11 @@
+# Local development backing services only — Postgres, Redis, Mailpit.
+#
+#   docker compose up -d
+#
+# The API and web app deliberately run on the host (`uv run uvicorn ... --reload`
+# and `pnpm --filter @fastforge/web dev`) rather than in containers: hot reload
+# through a bind mount is markedly slower, and you want a debugger attached.
+# For the containerized full stack, that's docker-compose.prod.yml.
 services:
   postgres:
     image: postgres:16-alpine
@@ -38,49 +46,6 @@ services:
     ports:
       - "1025:1025"
       - "8025:8025"
-
-  # TODO: Uncomment when apps/api is implemented
-  # api:
-  #   build:
-  #     context: .
-  #     dockerfile: docker/api/Dockerfile
-  #   container_name: fastforge-api
-  #   env_file:
-  #     - .env
-  #   ports:
-  #     - "8000:8000"
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_healthy
-
-  # TODO: Uncomment when apps/worker is implemented
-  # worker:
-  #   build:
-  #     context: .
-  #     dockerfile: docker/worker/Dockerfile
-  #   container_name: fastforge-worker
-  #   env_file:
-  #     - .env
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_healthy
-
-  # TODO: Uncomment when apps/web is implemented
-  # web:
-  #   build:
-  #     context: .
-  #     dockerfile: docker/web/Dockerfile
-  #   container_name: fastforge-web
-  #   env_file:
-  #     - .env
-  #   ports:
-  #     - "3000:3000"
-  #   depends_on:
-  #     - api
 
 volumes:
   postgres_data:

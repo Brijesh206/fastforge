@@ -16,6 +16,7 @@ members = [
     "packages/cache",
     "packages/common",
     "packages/database",
+    "packages/jobs",
     "packages/logging",
     "packages/mail",
     "packages/notifications",
@@ -70,3 +71,9 @@ python_version = "3.13"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
+
+# celery ships no py.typed marker, so its symbols resolve to Any. Scoped to
+# celery only — everything else stays strict.
+[[tool.mypy.overrides]]
+module = ["celery.*"]
+ignore_missing_imports = true

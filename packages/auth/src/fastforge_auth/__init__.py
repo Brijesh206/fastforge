@@ -29,7 +29,7 @@ from fastforge_auth.schemas.auth import (
     TokenClaims,
     TokenPair,
 )
-from fastforge_auth.schemas.user import UserCreate, UserResponse
+from fastforge_auth.schemas.user import PasswordChange, UserCreate, UserResponse, UserUpdate
 from fastforge_auth.schemas.verification import (
     MessageResponse,
     PasswordResetConfirm,
@@ -60,6 +60,7 @@ __all__ = [
     "OAuthProvider",
     "OAuthSettings",
     "OAuthUserInfo",
+    "PasswordChange",
     "PasswordHasher",
     "PasswordResetConfirm",
     "PasswordResetRequest",
@@ -74,5 +75,6 @@ __all__ = [
     "UserNotFoundError",
     "UserRepository",
     "UserResponse",
+    "UserUpdate",
     "VerifyEmailRequest",
 ]

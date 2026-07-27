@@ -28,3 +28,13 @@ class User(BaseModel):
     last_login_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, default=None
     )
+
+    @property
+    def has_password(self) -> bool:
+        """True when a local password is set; false for OAuth-only accounts.
+
+        The settings UI reads this to decide between "set a password" and
+        "change password" — an OAuth-only user has no current password to
+        prove.
+        """
+        return self.password_hash is not None

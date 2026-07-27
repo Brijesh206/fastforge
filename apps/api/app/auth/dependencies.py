@@ -15,6 +15,7 @@ from fastforge_auth import (
     UserRepository,
 )
 from fastforge_common.exceptions import AuthenticationError
+from fastforge_jobs import TaskQueue
 from fastforge_mail import EmailService
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,6 +43,11 @@ def get_auth_settings(request: Request) -> AuthSettings:
 def get_email_service(request: Request) -> EmailService:
     """Return the process-wide email service created during startup."""
     return request.app.state.email_service
+
+
+def get_task_queue(request: Request) -> TaskQueue:
+    """Return the process-wide background task queue created during startup."""
+    return request.app.state.task_queue
 
 
 def get_oauth_settings(request: Request) -> OAuthSettings:

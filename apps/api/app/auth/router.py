@@ -9,7 +9,7 @@ import secrets
 from http import HTTPStatus
 
 import httpx
-from fastapi import APIRouter, BackgroundTasks, Depends, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import RedirectResponse
 from fastforge_auth import (
     AccountDeleteRequest,
@@ -20,6 +20,7 @@ from fastforge_auth import (
     OAuthEmailNotVerifiedError,
     OAuthNotConfiguredError,
     OAuthProvider,
+    PasswordChange,
     PasswordResetConfirm,
     PasswordResetRequest,
     RefreshRequest,
@@ -27,19 +28,20 @@ from fastforge_auth import (
     User,
     UserCreate,
     UserResponse,
+    UserUpdate,
     VerifyEmailRequest,
 )
 from fastforge_billing import BillingService
 from fastforge_common.exceptions import AuthenticationError
-from fastforge_mail import EmailService
+from fastforge_jobs import TaskQueue
 
 from app.auth.dependencies import (
     get_auth_service,
     get_auth_settings,
     get_current_user,
-    get_email_service,
     get_github_oauth_provider,
     get_google_oauth_provider,
+    get_task_queue,
 )
 from app.auth.emails import schedule_password_reset_email, schedule_verification_email
 from app.billing.dependencies import get_billing_service
@@ -67,17 +69,15 @@ _OAUTH_STATE_COOKIE = "oauth_state"
 )
 async def register(
     payload: UserCreate,
-    background_tasks: BackgroundTasks,
     service: AuthService = Depends(get_auth_service),
-    email_service: EmailService = Depends(get_email_service),
+    task_queue: TaskQueue = Depends(get_task_queue),
     settings: AuthSettings = Depends(get_auth_settings),
 ) -> UserResponse:
     """Register a new user and send a verification email."""
     user = await service.register_user(payload)
     raw_token = await service.issue_email_verification_token(user)
-    schedule_verification_email(
-        background_tasks,
-        email_service,
+    await schedule_verification_email(
+        task_queue,
         frontend_base_url=get_settings().frontend_base_url,
         settings=settings,
         to=user.email,
@@ -104,10 +104,48 @@ async def refresh(
     return await service.refresh_tokens(payload.refresh_token)
 
 
+def _me_response(user: User) -> UserResponse:
+    """Serialize a user for its owner, including the derived admin flag.
+
+    ``is_admin`` mirrors the admin router's own gate exactly (verified *and*
+    listed in ADMIN_EMAILS) — if it were merely the email check, an unverified
+    admin would see the panel link and then be refused by the API.
+    """
+    response = UserResponse.model_validate(user)
+    response.is_admin = user.is_verified and get_settings().is_admin(user.email)
+    return response
+
+
 @router.get("/me", response_model=UserResponse)
 async def me(current_user: User = Depends(get_current_user)) -> UserResponse:
     """Return the currently authenticated user."""
-    return UserResponse.model_validate(current_user)
+    return _me_response(current_user)
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_me(
+    payload: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    service: AuthService = Depends(get_auth_service),
+) -> UserResponse:
+    """Update the authenticated user's own profile."""
+    user = await service.update_profile(current_user, payload)
+    return _me_response(user)
+
+
+@router.post("/password", response_model=TokenPair, dependencies=[Depends(_reset_limit)])
+async def change_password(
+    payload: PasswordChange,
+    current_user: User = Depends(get_current_user),
+    service: AuthService = Depends(get_auth_service),
+) -> TokenPair:
+    """Set or change the authenticated user's password.
+
+    Returns a fresh token pair: changing the password bumps token_version,
+    which revokes every outstanding token, so the caller needs new ones to
+    stay signed in. Every *other* device is signed out, which is the point.
+    """
+    return await service.change_password(current_user, payload)
 
 
 @router.post("/verify-email", response_model=MessageResponse)
@@ -127,10 +165,9 @@ async def verify_email(
     dependencies=[Depends(_resend_limit)],
 )
 async def resend_verification(
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     service: AuthService = Depends(get_auth_service),
-    email_service: EmailService = Depends(get_email_service),
+    task_queue: TaskQueue = Depends(get_task_queue),
     settings: AuthSettings = Depends(get_auth_settings),
 ) -> MessageResponse:
     """Send a fresh verification email to the authenticated user."""
@@ -138,9 +175,8 @@ async def resend_verification(
         return MessageResponse(detail="Email is already verified.")
 
     raw_token = await service.issue_email_verification_token(current_user)
-    schedule_verification_email(
-        background_tasks,
-        email_service,
+    await schedule_verification_email(
+        task_queue,
         frontend_base_url=get_settings().frontend_base_url,
         settings=settings,
         to=current_user.email,
@@ -157,9 +193,8 @@ async def resend_verification(
 )
 async def request_password_reset(
     payload: PasswordResetRequest,
-    background_tasks: BackgroundTasks,
     service: AuthService = Depends(get_auth_service),
-    email_service: EmailService = Depends(get_email_service),
+    task_queue: TaskQueue = Depends(get_task_queue),
     settings: AuthSettings = Depends(get_auth_settings),
 ) -> MessageResponse:
     """Send a password-reset link if an account exists for the email.
@@ -170,9 +205,8 @@ async def request_password_reset(
     result = await service.issue_password_reset_token(payload.email)
     if result is not None:
         user, raw_token = result
-        schedule_password_reset_email(
-            background_tasks,
-            email_service,
+        await schedule_password_reset_email(
+            task_queue,
             frontend_base_url=get_settings().frontend_base_url,
             settings=settings,
             to=user.email,

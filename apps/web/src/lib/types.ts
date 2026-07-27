@@ -7,9 +7,27 @@ export interface User {
   avatar_url: string | null;
   is_active: boolean;
   is_verified: boolean;
+  /** False for OAuth-only accounts — they set a first password, not change one. */
+  has_password: boolean;
   last_login_at: string | null;
   created_at: string;
   updated_at: string;
+  /** Derived from ADMIN_EMAILS on the server; only ever true on /auth/me. */
+  is_admin: boolean;
+}
+
+export interface ApiKey {
+  id: string;
+  name: string;
+  key_prefix: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
+  created_at: string;
+}
+
+/** Only returned at creation — `api_key` is never retrievable again. */
+export interface ApiKeyCreated extends ApiKey {
+  api_key: string;
 }
 
 export interface TokenPair {

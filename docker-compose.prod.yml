@@ -1,10 +1,17 @@
-# Production stack for a single VPS (~1 vCPU / 1GB is enough — the web app runs
-# on Vercel and Postgres is Supabase, so only the API + Caddy live here).
+# Production stack for a single VPS: web + API + Redis + Caddy (auto-HTTPS).
+# Postgres is external (Supabase), so nothing stateful but Redis lives here.
 #
 #   docker compose -f docker-compose.prod.yml up -d --build
 #
+# That one command is the whole deploy: images build, migrations run from the
+# API entrypoint, Caddy fetches certs. No manual start steps on the box.
+#
 # Requires a .env alongside this file (see .env.production.example) and DNS
-# A-record for $API_DOMAIN pointing at this host.
+# A-records for both $API_DOMAIN and $WEB_DOMAIN pointing at this host.
+#
+# Budget: ~1 vCPU / 1 GB runs this fine, but the *web build* is memory-hungry —
+# add swap before the first `up --build` (see docs/16-deployment.md), or build
+# the images elsewhere and pull them.
 services:
   api:
     build:
@@ -24,6 +31,46 @@ services:
       timeout: 5s
       retries: 3
       start_period: 40s
+
+  # Consumes the queue the API produces to. Scale with
+  # `docker compose -f docker-compose.prod.yml up -d --scale worker=3`.
+  # Runs no migrations: the api container owns the schema, and two containers
+  # racing `alembic upgrade head` on boot is how you corrupt one.
+  worker:
+    build:
+      context: .
+      dockerfile: docker/worker/Dockerfile
+    image: fastforge-worker:latest
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web/Dockerfile
+      # NEXT_PUBLIC_* is compiled into the browser bundle, so it has to be a
+      # build arg. The browser talks to the API over the public domain — the
+      # compose network name (api:8000) is unreachable from a user's machine.
+      args:
+        NEXT_PUBLIC_API_URL: https://${API_DOMAIN:?set API_DOMAIN in .env}/api/v1
+        NEXT_PUBLIC_APP_NAME: ${APP_NAME:-FastForge}
+    image: fastforge-web:latest
+    restart: unless-stopped
+    depends_on:
+      - api
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   # Rate limiting, token revocation and API-key limits all read through the
   # cache. Without this the API silently falls back to in-memory, which means
@@ -47,8 +94,10 @@ services:
     restart: unless-stopped
     depends_on:
       - api
+      - web
     environment:
       API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN in .env}
+      WEB_DOMAIN: ${WEB_DOMAIN:?set WEB_DOMAIN in .env}
     ports:
       - "80:80"
       - "443:443"

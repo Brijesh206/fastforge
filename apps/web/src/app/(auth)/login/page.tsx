@@ -40,8 +40,11 @@ function LoginInner() {
 
     const form = new FormData(event.currentTarget);
     try {
-      await signIn(String(form.get("email")), String(form.get("password")));
-      router.push("/dashboard");
+      const user = await signIn(
+        String(form.get("email")),
+        String(form.get("password")),
+      );
+      router.push(user.is_admin ? "/admin" : "/dashboard");
     } catch (err) {
       setError(
         err instanceof ApiError && err.status === 401
@@ -95,7 +98,7 @@ function LoginInner() {
               <Label htmlFor="password">Password</Label>
               <Link
                 href="/forgot-password"
-                className="mb-1.5 text-sm font-medium text-secondary hover:underline"
+                className="mb-1.5 text-sm font-medium text-accent hover:underline"
               >
                 Forgot?
               </Link>
@@ -117,7 +120,7 @@ function LoginInner() {
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
-          <Link href="/signup" className="font-medium text-secondary hover:underline">
+          <Link href="/signup" className="font-medium text-accent hover:underline">
             Sign up
           </Link>
         </p>

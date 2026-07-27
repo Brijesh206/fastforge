@@ -61,7 +61,7 @@ function ResetPasswordForm() {
           <p className="mt-6 text-center text-sm text-muted-foreground">
             <Link
               href="/forgot-password"
-              className="font-medium text-secondary hover:underline"
+              className="font-medium text-accent hover:underline"
             >
               Request a new link
             </Link>
