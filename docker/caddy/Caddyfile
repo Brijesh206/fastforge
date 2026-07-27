@@ -1,6 +1,13 @@
-# Caddy terminates TLS (auto Let's Encrypt) and proxies to the API container.
-# API_DOMAIN comes from the environment, e.g. api.yourdomain.com
+# Caddy terminates TLS (auto Let's Encrypt) and proxies to the app containers.
+# Both domains come from the environment and need DNS A-records at this host:
+#   API_DOMAIN=api.yourdomain.com   WEB_DOMAIN=app.yourdomain.com
+
 {$API_DOMAIN} {
 	encode zstd gzip
 	reverse_proxy api:8000
+}
+
+{$WEB_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:3000
 }

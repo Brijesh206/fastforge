@@ -14,9 +14,11 @@ import type { User } from "@/lib/types";
 interface SessionContextValue {
   user: User | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  /** Resolves with the signed-in user so callers can route on is_admin
+   *  without waiting for the context value to propagate. */
+  signIn: (email: string, password: string) => Promise<User>;
   signOut: () => void;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<User | null>;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -29,13 +31,16 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     if (!tokenStore.access) {
       setUser(null);
       setLoading(false);
-      return;
+      return null;
     }
     try {
-      setUser(await api.me());
+      const current = await api.me();
+      setUser(current);
+      return current;
     } catch {
       tokenStore.clear();
       setUser(null);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -47,7 +52,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string) => {
     await api.login({ email, password });
-    setUser(await api.me());
+    const current = await api.me();
+    setUser(current);
+    return current;
   }, []);
 
   const signOut = useCallback(() => {

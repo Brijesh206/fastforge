@@ -23,7 +23,7 @@ from fastforge_auth.models.user import User
 from fastforge_auth.repositories.auth_token import AuthTokenRepository
 from fastforge_auth.repositories.user import UserRepository
 from fastforge_auth.schemas.auth import LoginRequest, TokenPair
-from fastforge_auth.schemas.user import UserCreate
+from fastforge_auth.schemas.user import PasswordChange, UserCreate, UserUpdate
 from fastforge_auth.tokens import generate_token, hash_token
 
 
@@ -217,19 +217,47 @@ class AuthService:
         user.token_version += 1
         return await self._user_repository.update(user)
 
-    def verify_current_password(self, user: User, password: str) -> None:
+    async def update_profile(self, user: User, data: UserUpdate) -> User:
+        """Update the editable fields of a user's own profile."""
+        user.full_name = data.full_name
+        return await self._user_repository.update(user)
+
+    async def change_password(self, user: User, data: PasswordChange) -> TokenPair:
+        """Set or replace a user's password and return a fresh token pair.
+
+        An account with no password_hash (OAuth-only) sets its first password
+        without proving a current one. Otherwise the current password must be
+        supplied and match.
+
+        Bumping token_version invalidates every outstanding token, including
+        the caller's own — hence the new pair, which keeps the current session
+        alive while signing out every other device.
+
+        Raises InvalidCredentialsError if a password is set and the supplied
+        current one is missing or wrong.
+        """
+        self.verify_current_password(user, data.current_password)
+
+        user.password_hash = self._password_hasher.hash(data.new_password)
+        user.token_version += 1
+        user = await self._user_repository.update(user)
+
+        return self._token_service.issue_token_pair(user.id, user.token_version)
+
+    def verify_current_password(self, user: User, password: str | None) -> None:
         """Re-check a password before a destructive action (e.g. account deletion).
 
-        A no-op if the account has no password set (not reachable today since
-        registration always sets one, but password_hash is nullable for a
-        future OAuth-only user) — there is nothing to verify against, so the
-        caller's existing authentication is trusted.
+        A no-op if the account has no password set — an OAuth-only user has
+        nothing to verify against, so their existing authentication is
+        trusted and ``password`` may be None.
 
-        Raises InvalidCredentialsError if a password is set and doesn't match.
+        Raises InvalidCredentialsError if a password IS set and the supplied
+        one is missing or doesn't match. Missing counts as wrong: otherwise
+        omitting the field would be a way around proving ownership.
         """
         if user.password_hash is None:
             return
-        if not self._password_hasher.verify(password, user.password_hash):
+        if not password or not self._password_hasher.verify(password, user.password_hash):
             raise InvalidCredentialsError()
 
     async def delete_account(self, user_id: UUID) -> None:

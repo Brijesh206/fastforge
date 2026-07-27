@@ -1,17 +1,23 @@
 [project]
 name = "fastforge-worker"
 version = "0.1.0"
-description = "Celery worker for FastForge"
+description = "Background worker for FastForge"
 requires-python = ">=3.13"
 dependencies = [
-    "celery[redis]>=5.4",
-    "fastforge-database",
+    # Both backends, so a buyer can switch JOBS_PROVIDER without reinstalling.
+    "fastforge-jobs[taskiq,celery]",
+    "fastforge-mail",
     "fastforge-common",
+    "fastforge-logging",
+    "fastforge-database",
 ]
 
 [tool.uv.sources]
-fastforge-database = { workspace = true }
+fastforge-jobs = { workspace = true }
+fastforge-mail = { workspace = true }
 fastforge-common = { workspace = true }
+fastforge-logging = { workspace = true }
+fastforge-database = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]
@@ -19,3 +25,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["worker_app"]
+
+[project.scripts]
+fastforge-worker = "worker_app.main:main"

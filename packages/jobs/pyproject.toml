@@ -1,0 +1,23 @@
+[project]
+name = "fastforge-jobs"
+version = "0.1.0"
+description = "Background job queue with swappable backends"
+requires-python = ">=3.13"
+dependencies = ["fastforge-common", "fastforge-logging", "pydantic-settings>=2.7.0"]
+
+# Backends are opt-in: an install that stays on the in-memory provider carries
+# neither. The factory imports these lazily and says which extra is missing.
+[project.optional-dependencies]
+taskiq = ["taskiq>=0.11", "taskiq-redis>=1.0"]
+celery = ["celery[redis]>=5.4"]
+
+[tool.uv.sources]
+fastforge-common = { workspace = true }
+fastforge-logging = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fastforge_jobs"]

@@ -13,6 +13,7 @@ from uuid import uuid4
 import pytest
 from fastforge_auth.exceptions import InvalidCredentialsError, InvalidTokenError, UserNotFoundError
 from fastforge_auth.models.user import User
+from fastforge_auth.schemas.user import PasswordChange, UserUpdate
 from fastforge_auth.tokens import hash_token
 
 if TYPE_CHECKING:
@@ -164,6 +165,17 @@ def test_verify_current_password_is_noop_without_a_password_hash(
     user = User(email="oauth@example.com", password_hash=None)
 
     auth_service.verify_current_password(user, "anything")  # does not raise
+    auth_service.verify_current_password(user, None)  # nor does omitting it
+
+
+def test_verify_current_password_rejects_a_missing_password_when_one_is_set(
+    auth_service: AuthService, fake_users: FakeUserRepository
+) -> None:
+    """Omitting the field must not bypass the check on a password-backed account."""
+    user = _add_user(fake_users)
+
+    with pytest.raises(InvalidCredentialsError):
+        auth_service.verify_current_password(user, None)
 
 
 async def test_delete_account_removes_the_user(
@@ -180,6 +192,78 @@ async def test_delete_account_removes_the_user(
 async def test_delete_account_raises_for_unknown_user(auth_service: AuthService) -> None:
     with pytest.raises(UserNotFoundError):
         await auth_service.delete_account(uuid4())
+
+
+async def test_change_password_updates_the_hash_and_returns_usable_tokens(
+    auth_service: AuthService, fake_users: FakeUserRepository
+) -> None:
+    user = _add_user(fake_users)  # password_hash="hashed:old"
+
+    pair = await auth_service.change_password(
+        user, PasswordChange(current_password="old", new_password="a-brand-new-pass")
+    )
+
+    assert user.password_hash == "hashed:a-brand-new-pass"
+    # The returned pair must survive the token_version bump it just caused.
+    await auth_service.refresh_tokens(pair.refresh_token)
+
+
+async def test_change_password_rejects_a_wrong_current_password(
+    auth_service: AuthService, fake_users: FakeUserRepository
+) -> None:
+    user = _add_user(fake_users)
+
+    with pytest.raises(InvalidCredentialsError):
+        await auth_service.change_password(
+            user, PasswordChange(current_password="wrong", new_password="a-brand-new-pass")
+        )
+
+
+async def test_change_password_requires_a_current_password_when_one_is_set(
+    auth_service: AuthService, fake_users: FakeUserRepository
+) -> None:
+    """Omitting current_password must not be a way around proving the old one."""
+    user = _add_user(fake_users)
+
+    with pytest.raises(InvalidCredentialsError):
+        await auth_service.change_password(user, PasswordChange(new_password="a-brand-new-pass"))
+
+
+async def test_oauth_only_user_sets_a_first_password_without_a_current_one(
+    auth_service: AuthService, fake_users: FakeUserRepository
+) -> None:
+    user = _add_user(fake_users)
+    user.password_hash = None
+
+    await auth_service.change_password(user, PasswordChange(new_password="a-brand-new-pass"))
+
+    assert user.password_hash == "hashed:a-brand-new-pass"
+    assert user.has_password is True
+
+
+async def test_change_password_revokes_outstanding_token_pairs(
+    auth_service: AuthService, fake_users: FakeUserRepository
+) -> None:
+    user = _add_user(fake_users)
+    old_pair = auth_service._token_service.issue_token_pair(user.id, user.token_version)
+
+    await auth_service.change_password(
+        user, PasswordChange(current_password="old", new_password="a-brand-new-pass")
+    )
+
+    with pytest.raises(InvalidTokenError):
+        await auth_service.refresh_tokens(old_pair.refresh_token)
+
+
+async def test_update_profile_clears_a_blank_name(
+    auth_service: AuthService, fake_users: FakeUserRepository
+) -> None:
+    user = _add_user(fake_users)
+    user.full_name = "Ada Lovelace"
+
+    await auth_service.update_profile(user, UserUpdate(full_name="   "))
+
+    assert user.full_name is None
 
 
 async def test_password_reset_revokes_outstanding_token_pairs(

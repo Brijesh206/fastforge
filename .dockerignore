@@ -7,14 +7,15 @@
 **/.mypy_cache
 **/.ruff_cache
 
-# Virtualenvs / node — rebuilt inside the image, never copied in.
+# Virtualenvs / node / build output — regenerated inside the image, never
+# copied in. A local .next especially must not leak into the web build.
 .venv
 **/.venv
 node_modules
 **/node_modules
-
-# The API image doesn't need the web app.
-apps/web
+**/.next
+**/.turbo
+**/*.tsbuildinfo
 
 # Never ship secrets.
 .env

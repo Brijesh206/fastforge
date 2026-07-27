@@ -1,1 +1,0 @@
-# TODO: Celery worker configuration.

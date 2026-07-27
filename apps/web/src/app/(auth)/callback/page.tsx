@@ -35,7 +35,9 @@ export default function OAuthCallbackPage() {
     });
     // Drop the tokens from the visible URL/history before navigating on.
     window.history.replaceState(null, "", window.location.pathname);
-    void refresh().then(() => router.replace("/dashboard"));
+    void refresh().then((user) =>
+      router.replace(user?.is_admin ? "/admin" : "/dashboard"),
+    );
   }, [refresh, router]);
 
   return (

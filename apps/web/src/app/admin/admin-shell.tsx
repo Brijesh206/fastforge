@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   LayoutDashboard,
@@ -13,7 +12,6 @@ import {
   Users,
 } from "lucide-react";
 
-import { api, ApiError } from "@/lib/api";
 import { useSession } from "@/providers/session-provider";
 import { useAdminTheme } from "@/app/admin/theme";
 
@@ -23,38 +21,22 @@ const NAV = [
   { href: "/admin/settings", label: "Settings", icon: Settings, exact: false },
 ];
 
-type Access = "checking" | "granted" | "denied";
-
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const { theme } = useAdminTheme();
   const { user, signOut } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const [access, setAccess] = useState<Access>("checking");
-
-  // Probe the admin API once. A 403 means "logged in but not an admin".
-  useEffect(() => {
-    let active = true;
-    api.admin
-      .stats()
-      .then(() => active && setAccess("granted"))
-      .catch((error) => {
-        if (!active) return;
-        setAccess(error instanceof ApiError && error.status === 403 ? "denied" : "granted");
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
 
   function handleSignOut() {
     signOut();
     router.push("/");
   }
 
+  // is_admin comes straight off /auth/me and mirrors the API's own gate, so
+  // no probe request is needed. AuthGuard has already resolved the session.
   return (
     <div className="ff-admin" data-theme={theme}>
-      {access === "denied" ? (
+      {!user?.is_admin ? (
         <AccessDenied email={user?.email ?? ""} onSignOut={handleSignOut} />
       ) : (
         <div className="drawer min-h-dvh bg-base-100 text-base-content lg:drawer-open">
@@ -80,15 +62,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               </div>
             </header>
 
-            <main className="flex-1 p-4 lg:p-8">
-              {access === "checking" ? (
-                <div className="flex min-h-[50vh] items-center justify-center">
-                  <span className="loading loading-spinner loading-lg text-primary" />
-                </div>
-              ) : (
-                children
-              )}
-            </main>
+            <main className="flex-1 p-4 lg:p-8">{children}</main>
           </div>
 
           {/* Sidebar */}

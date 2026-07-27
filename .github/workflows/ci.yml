@@ -65,6 +65,7 @@ jobs:
           packages/auth/src
           packages/mail/src
           packages/billing/src
+          packages/jobs/src
 
       - name: Audit dependencies for known vulnerabilities
         run: |

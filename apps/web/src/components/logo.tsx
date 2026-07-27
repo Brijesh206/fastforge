@@ -33,7 +33,9 @@ export function Logo({
           className="fill-primary-foreground"
         />
       </svg>
-      {APP_NAME}
+      {/* Wrapped so callers can hide the wordmark and keep the mark — the
+          collapsed sidebar rail does exactly that. */}
+      <span>{APP_NAME}</span>
     </Link>
   );
 }
