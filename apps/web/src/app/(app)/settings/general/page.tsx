@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { SettingRow } from "@/components/setting-row";
 import { Alert } from "@/components/ui/alert";
-import { Avatar } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -43,7 +43,7 @@ export default function GeneralSettingsPage() {
         )}
 
         <div className="flex items-center gap-4 border-b border-border pb-5">
-          <Avatar
+          <UserAvatar
             src={user.avatar_url}
             name={user.full_name}
             email={user.email}

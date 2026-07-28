@@ -1,64 +1,50 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
-/** daisyUI themes exposed in the panel. Keep in sync with the `themes:` list in
- *  src/styles/globals.css — a theme not enabled there won't render. */
-export const ADMIN_THEMES = [
-  "light",
-  "dark",
-  "corporate",
-  "business",
-  "emerald",
-  "synthwave",
-  "retro",
-  "dracula",
-  "night",
-  "forest",
-  "luxury",
-  "nord",
-  "winter",
-  "autumn",
-  "coffee",
-  "dim",
-  "sunset",
-  "cupcake",
-  "valentine",
-  "lofi",
-] as const;
-
-export type AdminTheme = (typeof ADMIN_THEMES)[number];
+export type AdminTheme = "light" | "dark";
 
 const STORAGE_KEY = "ff-admin-theme";
-const DEFAULT_THEME: AdminTheme = "light";
 
 interface ThemeContextValue {
   theme: AdminTheme;
-  setTheme: (theme: AdminTheme) => void;
+  toggle: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
+/** Light/dark for the admin panel.
+ *
+ *  Replaces the previous 20-theme daisyUI switcher: the panel now runs on the
+ *  same shadcn token set as the rest of the app. Adding a theme is one more
+ *  `.ff-admin[data-theme="…"]` block in globals.css, which is a change a
+ *  buyer can make without learning a plugin's theme format. */
 export function AdminThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<AdminTheme>(DEFAULT_THEME);
+  const [theme, setThemeState] = useState<AdminTheme>("light");
 
-  // Read the saved theme after mount (localStorage is client-only).
+  // Read after mount: localStorage is client-only, and branching on it during
+  // render would hydrate markup the server never produced.
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY) as AdminTheme | null;
-    if (saved && (ADMIN_THEMES as readonly string[]).includes(saved)) {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved === "light" || saved === "dark") {
       setThemeState(saved);
+      return;
     }
+    setThemeState(
+      window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light",
+    );
   }, []);
 
-  function setTheme(next: AdminTheme) {
-    setThemeState(next);
-    localStorage.setItem(STORAGE_KEY, next);
-  }
+  const toggle = useCallback(() => {
+    setThemeState((current) => {
+      const next: AdminTheme = current === "light" ? "dark" : "light";
+      localStorage.setItem(STORAGE_KEY, next);
+      return next;
+    });
+  }, []);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={{ theme, toggle }}>{children}</ThemeContext.Provider>
   );
 }
 
