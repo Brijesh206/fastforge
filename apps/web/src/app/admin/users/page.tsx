@@ -1,11 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Search } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 
+import { UserDetailModal } from "@/app/admin/users/user-detail-modal";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { api, ApiError } from "@/lib/api";
 import type { AdminUserItem, AdminUserList } from "@/lib/types";
-import { UserDetailModal } from "@/app/admin/users/user-detail-modal";
 
 const PAGE_SIZE = 20;
 
@@ -60,7 +72,10 @@ export default function AdminUsersPage() {
   function applyUpdate(updated: AdminUserItem) {
     setData((current) =>
       current
-        ? { ...current, items: current.items.map((u) => (u.id === updated.id ? { ...u, ...updated } : u)) }
+        ? {
+            ...current,
+            items: current.items.map((u) => (u.id === updated.id ? { ...u, ...updated } : u)),
+          }
         : current,
     );
   }
@@ -83,116 +98,122 @@ export default function AdminUsersPage() {
     <div className="mx-auto max-w-5xl">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Users</h1>
-          <p className="text-sm opacity-60">
+          <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
+          <p className="text-sm text-muted-foreground">
             {data ? `${data.total.toLocaleString()} total` : "Loading…"}
           </p>
         </div>
-        <label className="input input-bordered flex items-center gap-2">
-          <Search className="size-4 opacity-50" />
-          <input
+        <div className="relative w-full sm:w-64">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
             type="search"
-            className="grow"
+            className="pl-9"
             placeholder="Search by email"
             value={qInput}
             onChange={(e) => setQInput(e.target.value)}
           />
-        </label>
+        </div>
       </div>
 
-      <div className="overflow-x-auto rounded-box border border-base-300 bg-base-200">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>User</th>
-              <th>Status</th>
-              <th>Joined</th>
-              <th className="text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={4} className="py-10 text-center">
-                  <span className="loading loading-spinner loading-md text-primary" />
-                </td>
-              </tr>
-            ) : items.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="py-10 text-center opacity-60">
-                  No users found.
-                </td>
-              </tr>
-            ) : (
-              items.map((user) => (
-                <tr key={user.id} className="hover">
-                  <td>
-                    <button
-                      className="text-left"
-                      onClick={() => setSelectedId(user.id)}
-                    >
-                      <div className="font-medium hover:underline">{user.email}</div>
-                      {user.full_name && (
-                        <div className="text-xs opacity-60">{user.full_name}</div>
-                      )}
-                    </button>
-                  </td>
-                  <td>
-                    <div className="flex flex-wrap gap-1">
-                      <span
-                        className={`badge badge-sm ${user.is_active ? "badge-success" : "badge-ghost"}`}
-                      >
-                        {user.is_active ? "Active" : "Inactive"}
-                      </span>
-                      {user.is_verified ? (
-                        <span className="badge badge-sm badge-outline">Verified</span>
-                      ) : (
-                        <span className="badge badge-sm badge-warning badge-outline">Unverified</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="text-sm opacity-70">{formatDate(user.created_at)}</td>
-                  <td>
-                    <div className="flex justify-end gap-2">
-                      <button className="btn btn-ghost btn-xs" onClick={() => setSelectedId(user.id)}>
-                        View
+      <Card className="py-0">
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Joined</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="py-10 text-center">
+                    <Loader2 className="mx-auto size-5 animate-spin text-primary" />
+                  </TableCell>
+                </TableRow>
+              ) : items.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="py-10 text-center text-muted-foreground">
+                    No users found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                items.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <button className="text-left" onClick={() => setSelectedId(user.id)}>
+                        <div className="font-medium hover:underline">{user.email}</div>
+                        {user.full_name && (
+                          <div className="text-xs text-muted-foreground">{user.full_name}</div>
+                        )}
                       </button>
-                      <button
-                        className={`btn btn-xs ${user.is_active ? "btn-error btn-outline" : "btn-success btn-outline"}`}
-                        onClick={() => toggleActive(user)}
-                      >
-                        {user.is_active ? "Deactivate" : "Activate"}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant={user.is_active ? "success" : "secondary"}>
+                          {user.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                        {user.is_verified ? (
+                          <Badge variant="outline">Verified</Badge>
+                        ) : (
+                          <Badge variant="warning">Unverified</Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {formatDate(user.created_at)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => setSelectedId(user.id)}>
+                          View
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={
+                            user.is_active
+                              ? "text-destructive hover:text-destructive"
+                              : "text-success hover:text-success"
+                          }
+                          onClick={() => toggleActive(user)}
+                        >
+                          {user.is_active ? "Deactivate" : "Activate"}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between">
-          <span className="text-sm opacity-60">
+          <span className="text-sm text-muted-foreground">
             Page {page} of {totalPages}
           </span>
-          <div className="join">
-            <button
-              className="btn btn-sm join-item"
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
               disabled={page <= 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
             >
               Prev
-            </button>
-            <button
-              className="btn btn-sm join-item"
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               disabled={page >= totalPages}
               onClick={() => setPage((p) => p + 1)}
             >
               Next
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -207,10 +228,8 @@ export default function AdminUsersPage() {
       )}
 
       {toast && (
-        <div className="toast toast-end z-50">
-          <div className="alert alert-error">
-            <span>{toast}</span>
-          </div>
+        <div className="fixed bottom-4 right-4 z-50 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive shadow-lg">
+          {toast}
         </div>
       )}
     </div>

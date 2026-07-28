@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, LogOut, Settings, ShieldCheck } from "lucide-react";
 
-import { Avatar } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/user-avatar";
 import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/providers/session-provider";
@@ -65,7 +65,7 @@ export function AppSidebar() {
       <div className="border-t border-border p-2 lg:p-3">
         {user && (
           <div className="flex items-center justify-center gap-3 px-1 py-2 lg:justify-start">
-            <Avatar
+            <UserAvatar
               src={user.avatar_url}
               name={user.full_name}
               email={user.email}

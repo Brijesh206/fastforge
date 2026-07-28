@@ -21,11 +21,11 @@ export default function SettingsLayout({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Settings</h1>
+      <h1 className="ff-reveal text-2xl font-bold">Settings</h1>
 
       <div className="flex flex-col gap-6 sm:flex-row sm:gap-8">
         {/* Horizontal strip on mobile, rail on desktop — same links either way. */}
-        <nav className="-mx-1 flex shrink-0 gap-1 overflow-x-auto pb-1 sm:mx-0 sm:w-48 sm:flex-col sm:overflow-visible sm:pb-0">
+        <nav className="ff-reveal -mx-1 flex shrink-0 gap-1 overflow-x-auto pb-1 sm:mx-0 sm:w-48 sm:flex-col sm:overflow-visible sm:pb-0">
           {TABS.map(({ href, label }) => (
             <Link
               key={href}
@@ -43,7 +43,14 @@ export default function SettingsLayout({
           ))}
         </nav>
 
-        <div className="min-w-0 flex-1">{children}</div>
+        {/* Keyed on the route so each tab's panel re-animates on navigation. */}
+        <div
+          key={pathname}
+          className="ff-reveal min-w-0 flex-1"
+          style={{ "--d": "80ms" } as React.CSSProperties}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );

@@ -1,8 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { api, ApiError } from "@/lib/api";
 import type { AdminUserDetail, AdminUserItem } from "@/lib/types";
 
@@ -58,41 +67,36 @@ export function UserDetailModal({
   const sub = user?.subscription;
 
   return (
-    <dialog className="modal modal-open" onClose={onClose}>
-      <div className="modal-box max-w-lg">
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-semibold">User detail</h3>
-            {user && <p className="text-sm opacity-60">{user.email}</p>}
-          </div>
-          <button className="btn btn-square btn-ghost btn-sm" onClick={onClose} aria-label="Close">
-            <X className="size-4" />
-          </button>
-        </div>
+    <Sheet open onOpenChange={(open) => !open && onClose()}>
+      <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+        <SheetHeader>
+          <SheetTitle>User detail</SheetTitle>
+          <SheetDescription>{user?.email ?? "Loading…"}</SheetDescription>
+        </SheetHeader>
 
         {!user ? (
           <div className="flex min-h-32 items-center justify-center">
-            <span className="loading loading-spinner loading-md text-primary" />
+            <Loader2 className="size-5 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="space-y-5">
-            <section className="grid grid-cols-2 gap-3 text-sm">
+          <div className="space-y-6 px-4 pb-4">
+            <section className="grid grid-cols-2 gap-4 text-sm">
               <Field label="Name" value={user.full_name ?? "—"} />
               <Field label="User ID" value={user.id} mono />
               <Field
                 label="Status"
                 value={
-                  <span className={`badge badge-sm ${user.is_active ? "badge-success" : "badge-ghost"}`}>
+                  <Badge variant={user.is_active ? "success" : "secondary"}>
                     {user.is_active ? "Active" : "Inactive"}
-                  </span>
+                  </Badge>
                 }
               />
               <Field
                 label="Email verified"
                 value={
-                  <span className={`badge badge-sm ${user.is_verified ? "badge-outline" : "badge-warning badge-outline"}`}>
+                  <Badge variant={user.is_verified ? "outline" : "warning"}>
                     {user.is_verified ? "Yes" : "No"}
-                  </span>
+                  </Badge>
                 }
               />
               <Field label="Joined" value={formatDateTime(user.created_at)} />
@@ -100,44 +104,40 @@ export function UserDetailModal({
             </section>
 
             <section>
-              <h4 className="mb-2 text-sm font-medium opacity-70">Subscription</h4>
+              <h4 className="mb-2 text-sm font-medium text-muted-foreground">Subscription</h4>
               {sub ? (
-                <div className="rounded-box border border-base-300 bg-base-200 p-3 text-sm">
-                  <div className="mb-2 flex items-center gap-2">
-                    <span className={`badge badge-sm ${sub.is_active ? "badge-success" : "badge-ghost"}`}>
+                <div className="rounded-lg border border-border bg-muted/40 p-4 text-sm">
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <Badge variant={sub.is_active ? "success" : "secondary"}>
                       {sub.status ?? "none"}
-                    </span>
+                    </Badge>
                     {sub.cancel_at_period_end && (
-                      <span className="badge badge-sm badge-warning badge-outline">Cancels at period end</span>
+                      <Badge variant="warning">Cancels at period end</Badge>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-2 opacity-80">
+                  <div className="grid grid-cols-2 gap-3">
                     <Field label="Renews / ends" value={formatDateTime(sub.current_period_end)} />
                     <Field label="Price ID" value={sub.price_id ?? "—"} mono />
                   </div>
                 </div>
               ) : (
-                <p className="text-sm opacity-60">No subscription.</p>
+                <p className="text-sm text-muted-foreground">No subscription.</p>
               )}
             </section>
 
-            <div className="modal-action">
-              <button
-                className={`btn btn-sm ${user.is_active ? "btn-error btn-outline" : "btn-success"}`}
-                onClick={toggleActive}
-                disabled={busy}
-              >
-                {busy && <span className="loading loading-spinner loading-xs" />}
-                {user.is_active ? "Deactivate user" : "Activate user"}
-              </button>
-            </div>
+            <Button
+              variant={user.is_active ? "outline" : "primary"}
+              className={user.is_active ? "text-destructive hover:text-destructive" : ""}
+              onClick={toggleActive}
+              disabled={busy}
+            >
+              {busy && <Loader2 className="size-4 animate-spin" />}
+              {user.is_active ? "Deactivate user" : "Activate user"}
+            </Button>
           </div>
         )}
-      </div>
-      <button className="modal-backdrop" onClick={onClose}>
-        close
-      </button>
-    </dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -152,8 +152,8 @@ function Field({
 }) {
   return (
     <div>
-      <div className="text-xs uppercase tracking-wide opacity-50">{label}</div>
-      <div className={`mt-0.5 ${mono ? "truncate font-mono text-xs" : ""}`}>{value}</div>
+      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={mono ? "mt-0.5 truncate font-mono text-xs" : "mt-0.5"}>{value}</div>
     </div>
   );
 }

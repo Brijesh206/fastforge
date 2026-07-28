@@ -18,10 +18,10 @@ import type { Subscription } from "@/lib/types";
 
 function statusBadge(sub: Subscription) {
   if (sub.is_active) return <Badge variant="success">Active</Badge>;
-  if (!sub.status) return <Badge variant="neutral">No plan</Badge>;
+  if (!sub.status) return <Badge variant="secondary">No plan</Badge>;
   if (sub.status === "past_due" || sub.status === "unpaid")
     return <Badge variant="warning">Payment due</Badge>;
-  return <Badge variant="danger">Canceled</Badge>;
+  return <Badge variant="destructive">Canceled</Badge>;
 }
 
 function formatDate(iso: string | null): string {

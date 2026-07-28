@@ -10,16 +10,20 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div>
+      <div className="ff-reveal">
         <h1 className="text-2xl font-bold">Welcome back, {firstName}</h1>
         <p className="mt-1 text-muted-foreground">
           Here&apos;s an overview of your account.
         </p>
       </div>
 
-      <VerifyEmailNotice />
+      <div className="ff-reveal" style={{ "--d": "80ms" } as React.CSSProperties}>
+        <VerifyEmailNotice />
+      </div>
 
-      <SubscriptionCard />
+      <div className="ff-reveal" style={{ "--d": "140ms" } as React.CSSProperties}>
+        <SubscriptionCard />
+      </div>
     </div>
   );
 }
